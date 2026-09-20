@@ -1,0 +1,41 @@
+<button
+  type="button"
+  class="group flex w-full items-center gap-4 border-b border-border py-3 pr-1 text-left transition last:border-b-0 hover:bg-surface-elevated/30 focus:outline-none"
+  [class.pl-2]="!rank()"
+  (click)="onClick()"
+>
+  @if (rank()) {
+    <span
+      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+      [class.bg-accent]="rank()! <= 3"
+      [class.text-white]="rank()! <= 3"
+      [class.bg-surface-elevated]="rank()! > 3"
+      [class.text-text-secondary]="rank()! > 3"
+    >
+      {{ rank() }}
+    </span>
+  }
+
+  <span class="h-10 w-10 shrink-0 rounded-full {{ player().avatarColor }} ring-2 ring-bg"></span>
+
+  <div class="min-w-0 flex-1">
+    <div class="flex items-center gap-2">
+      <p class="truncate font-medium text-text">{{ player().name }}</p>
+      @if (player().host) {
+        <span class="rounded bg-surface-elevated px-1.5 py-0.5 text-xs text-text-secondary">Host</span>
+      }
+      @if (player().bankrupt) {
+        <span class="rounded bg-danger-muted px-1.5 py-0.5 text-xs text-negative">Quiebra</span>
+      }
+    </div>
+    @if (isHostView()) {
+      <p class="text-xs text-text-muted">Valor neto {{ formattedNetWorth() }} · {{ propertyCount() }} prop.</p>
+    } @else {
+      <p class="text-xs text-text-muted">{{ propertyCount() }} propiedades</p>
+    }
+  </div>
+
+  <p class="shrink-0 text-sm font-semibold text-text">
+    {{ player().cash | money: currency() }}
+  </p>
+</button>

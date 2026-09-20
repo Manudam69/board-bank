@@ -1,61 +1,142 @@
-<div class="space-y-5">
-  <div class="rounded-2xl border border-border bg-surface p-5">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div class="flex items-center gap-3">
-        <span class="h-12 w-12 shrink-0 rounded-full {{ me().avatarColor }} ring-2 ring-bg"></span>
-        <div>
-          <h2 class="text-xl font-bold text-text">{{ me().name }}</h2>
-          @if (me().host) {
-            <span class="inline-block rounded bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary">Host</span>
-          }
-        </div>
-      </div>
-      <div class="text-left sm:text-right">
-        <p class="text-xs uppercase tracking-wide text-text-muted">Efectivo</p>
-        <app-money-display [amount]="me().cash" [currency]="currency()" size="xl" />
-      </div>
+<div class="space-y-8">
+  <!-- Hero balance -->
+  <div class="flex flex-col items-center gap-4 pt-2 text-center">
+    <div class="relative">
+      <span class="flex h-20 w-20 items-center justify-center rounded-full text-xl font-bold text-white ring-4 ring-bg {{ me().avatarColor }}">
+        {{ initials() }}
+      </span>
+      @if (me().host) {
+        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary ring-2 ring-bg">Host</span>
+      }
     </div>
-    <div class="mt-5 flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
-      <div>
-        <span class="text-text-muted">Valor neto:</span>
-        <app-money-display [amount]="netWorth()" [currency]="currency()" size="sm" />
-      </div>
-      <div class="text-text-secondary">Propiedades: <span class="font-medium text-text">{{ myProperties().length }}</span></div>
+    <div>
+      <h2 class="text-xl font-semibold text-text">{{ me().name }}</h2>
+      <p class="text-sm text-text-muted">{{ edition().name }}</p>
+    </div>
+
+    <div class="space-y-1">
+      <app-balance [amount]="me().cash" [currency]="currency()" size="xl" />
+      <p class="text-xs text-text-muted">Disponible · Valor neto {{ formattedNetWorth() }}</p>
     </div>
   </div>
 
-  <div class="rounded-2xl border border-border bg-surface p-5">
-    <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-text-muted">Acciones del banco</h3>
-    <div class="flex flex-wrap gap-2">
-      <app-button (clickAction)="salaryAction.emit()">
-        <span class="inline-flex items-center gap-1.5">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+  <!-- Stats row -->
+  <div class="grid grid-cols-4 gap-2">
+    <div class="rounded-xl border border-border bg-surface p-3 text-center">
+      <p class="text-lg font-semibold text-text">{{ myProperties().length }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-text-muted">Props</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-3 text-center">
+      <p class="text-lg font-semibold text-text">{{ mortgagesCount() }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-text-muted">Hipotec.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-3 text-center">
+      <p class="text-sm font-semibold text-positive">+{{ formattedReceived() }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-text-muted">Recibido</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-3 text-center">
+      <p class="text-sm font-semibold text-negative">-{{ formattedSpent() }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-text-muted">Gastado</p>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <div class="space-y-1">
+    <p class="px-1 text-xs font-medium uppercase tracking-wide text-text-muted">Banco</p>
+    <div class="divide-y divide-border rounded-2xl border border-border bg-surface">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-surface-elevated/50 focus:outline-none"
+        (click)="salaryAction.emit()"
+      >
+        <span class="inline-flex items-center gap-3 text-text">
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-positive-muted">
+            <svg class="h-4 w-4 text-positive" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['circle-dollar-sign']" />
+            </svg>
+          </span>
           Cobrar sueldo
         </span>
-      </app-button>
-      <app-button variant="secondary" (clickAction)="taxAction.emit('income')">Pagar renta</app-button>
-      <app-button variant="secondary" (clickAction)="taxAction.emit('luxury')">Pagar lujo</app-button>
-      <app-button variant="danger" (clickAction)="bankruptcyAction.emit()">Declarar quiebra</app-button>
+        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-surface-elevated/50 focus:outline-none"
+        (click)="taxAction.emit('income')"
+      >
+        <span class="inline-flex items-center gap-3 text-text">
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated">
+            <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['banknote']" />
+            </svg>
+          </span>
+          Pagar renta
+        </span>
+        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-surface-elevated/50 focus:outline-none"
+        (click)="taxAction.emit('luxury')"
+      >
+        <span class="inline-flex items-center gap-3 text-text">
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated">
+            <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['circle-dollar-sign']" />
+            </svg>
+          </span>
+          Pagar lujo
+        </span>
+        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-danger-muted/30 focus:outline-none"
+        (click)="bankruptcyAction.emit()"
+      >
+          <span class="inline-flex items-center gap-3 text-negative">
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-danger-muted">
+            <svg class="h-4 w-4 text-negative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['alert-triangle']" />
+            </svg>
+          </span>
+          Declarar quiebra
+        </span>
+        <svg class="h-5 w-5 text-negative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+        </svg>
+      </button>
     </div>
   </div>
 
-  <div>
-    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">Mis propiedades</h3>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <!-- Propiedades -->
+  <div class="space-y-3">
+    <div class="flex items-center justify-between px-1">
+      <h3 class="text-xs font-medium uppercase tracking-wide text-text-muted">Mis propiedades</h3>
+      <span class="text-xs text-text-muted">{{ myProperties().length }}</span>
+    </div>
+    <div class="divide-y divide-border rounded-2xl border border-border bg-surface">
       @for (item of myProperties(); track item.meta.id) {
-        <app-property-card
+        <app-property-row
           [property]="item.meta"
           [edition]="edition()"
           [owned]="item.owned"
-          [ownerName]="''"
+          (propertyClick)="propertyClick.emit($event)"
         />
       } @empty {
-        <div class="col-span-full">
+        <div class="p-4">
           <app-empty-state
             message="Aún no tienes propiedades."
-            description="Usa Comprar en la barra de acciones para adquirir una."
+            description="Compra una desde la barra de acciones."
           />
         </div>
       }

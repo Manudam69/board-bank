@@ -10,24 +10,38 @@ import { GameStateService } from '../../core/services/game-state.service';
 import { PropertyService } from '../../core/services/property.service';
 import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
+import { ToastService } from '../../core/services/toast.service';
+import { SoundService } from '../../core/services/sound.service';
 import { BankActionsBarComponent, type BankAction } from '../../shared/components/domain/bank-actions-bar.component';
+import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
+import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
-import { SpinnerComponent } from '../../shared/components/ui/spinner.component';
-import { TabsComponent } from '../../shared/components/ui/tabs.component';
-import { PlayerCardComponent } from '../../shared/components/domain/player-card.component';
-import { PlayerDashboardComponent } from '../../shared/components/domain/player-dashboard.component';
-import { PropertyCardComponent } from '../../shared/components/domain/property-card.component';
-import { TransferPanelComponent } from '../../shared/components/domain/transfer-panel.component';
-import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
 import { MortgagePanelComponent } from '../../shared/components/domain/mortgage-panel.component';
-import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
 import { RentPanelComponent } from '../../shared/components/domain/rent-panel.component';
+import { SkeletonComponent } from '../../shared/components/ui/skeleton.component';
+import { TabsComponent } from '../../shared/components/ui/tabs.component';
+import { BottomNavComponent } from '../../shared/components/ui/bottom-nav.component';
+import { ToastContainerComponent } from '../../shared/components/ui/toast-container.component';
+import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
+import { BalanceComponent } from '../../shared/components/ui/balance.component';
+import { PlayerDashboardComponent } from '../../shared/components/domain/player-dashboard.component';
+import { PropertyRowComponent } from '../../shared/components/domain/property-row.component';
+import { PropertyDetailSheetComponent } from '../../shared/components/domain/property-detail-sheet.component';
+import { PlayerRowComponent } from '../../shared/components/domain/player-row.component';
 import { TradeBuilderComponent } from '../../shared/components/domain/trade-builder.component';
 import { TradeListComponent } from '../../shared/components/domain/trade-list.component';
+import { TransferPanelComponent } from '../../shared/components/domain/transfer-panel.component';
 import { LogFeedComponent } from '../../shared/components/domain/log-feed.component';
-import { MoneyDisplayComponent } from '../../shared/components/domain/money-display.component';
 import { mapFirebaseError } from '../../core/utils/firebase-errors';
+import { ICONS } from '../../shared/icons';
+import type { PropertyMetadata } from '../../core/models';
+
+interface SuccessConfig {
+  message: string;
+  detail?: string;
+  sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error';
+}
 
 @Component({
   selector: 'app-game',
@@ -36,20 +50,24 @@ import { mapFirebaseError } from '../../core/utils/firebase-errors';
     FormsModule,
     ButtonComponent,
     ModalComponent,
-    SpinnerComponent,
+    SkeletonComponent,
     TabsComponent,
-    PlayerCardComponent,
+    BottomNavComponent,
+    ToastContainerComponent,
+    ConfirmDialogComponent,
+    BalanceComponent,
     PlayerDashboardComponent,
-    PropertyCardComponent,
-    TransferPanelComponent,
-    BuyPropertyPanelComponent,
-    MortgagePanelComponent,
-    BuildPanelComponent,
-    RentPanelComponent,
+    PropertyRowComponent,
+    PropertyDetailSheetComponent,
+    PlayerRowComponent,
     TradeBuilderComponent,
     TradeListComponent,
+    TransferPanelComponent,
+    BuyPropertyPanelComponent,
+    RentPanelComponent,
+    MortgagePanelComponent,
+    BuildPanelComponent,
     LogFeedComponent,
-    MoneyDisplayComponent,
     BankActionsBarComponent,
   ],
   templateUrl: './game.component.html',
@@ -65,6 +83,8 @@ export class GameComponent {
   private readonly tradeService = inject(TradeService);
   private readonly roomService = inject(RoomService);
   private readonly auth = inject(AuthService);
+  private readonly toastService = inject(ToastService);
+  protected readonly soundService = inject(SoundService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -94,7 +114,37 @@ export class GameComponent {
   readonly activeTab = signal('me');
   readonly activeAction = signal<BankAction | null>(null);
   readonly busy = signal(false);
-  readonly toast = signal('');
+  readonly confirmBankruptcyOpen = signal(false);
+  readonly confirmFinishOpen = signal(false);
+  readonly selectedProperty = signal<PropertyMetadata | undefined>(undefined);
+  readonly selectedPropertyActions = signal<{
+    canMortgage: boolean;
+    canUnmortgage: boolean;
+    canBuild: boolean;
+  }>({ canMortgage: false, canUnmortgage: false, canBuild: false });
+
+  readonly selectedPropertyOwner = computed(() => {
+    const property = this.selectedProperty();
+    if (!property) return undefined;
+    return this.room()?.players.find((p) => p.properties.some((pp) => pp.propertyId === property.id));
+  });
+
+  readonly selectedPropertyOwned = computed(() => {
+    const property = this.selectedProperty();
+    if (!property) return false;
+    const owner = this.selectedPropertyOwner();
+    return !!owner?.properties.find((pp) => pp.propertyId === property.id);
+  });
+
+  protected readonly icons = ICONS as Record<string, string>;
+
+  readonly tabs = [
+    { id: 'me', label: 'Yo', icon: ICONS['user'] },
+    { id: 'players', label: 'Jugadores', icon: ICONS['users'] },
+    { id: 'properties', label: 'Propiedades', icon: ICONS['building'] },
+    { id: 'trades', label: 'Intercambios', icon: ICONS['arrow-left-right'] },
+    { id: 'log', label: 'Historial', icon: ICONS['history'] },
+  ];
 
   constructor() {
     effect(() => {
@@ -120,14 +170,19 @@ export class GameComponent {
     this.activeAction.set(null);
   }
 
-  private async runOp(op: () => Promise<void>): Promise<void> {
+  private async runOp(op: () => Promise<void>, success?: SuccessConfig): Promise<void> {
     this.busy.set(true);
-    this.toast.set('');
     try {
       await op();
       this.activeAction.set(null);
+      if (success) {
+        this.toastService.success(success.message, success.detail);
+        this.soundService.play(success.sound);
+      }
     } catch (e) {
-      this.toast.set(mapFirebaseError(e));
+      const message = mapFirebaseError(e);
+      this.toastService.error(message);
+      this.soundService.play('error');
     } finally {
       this.busy.set(false);
     }
@@ -142,16 +197,28 @@ export class GameComponent {
   protected onTransfer(data: { toId: string | 'bank'; amount: number; reason: string }): void {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
+    const toName = data.toId === 'bank' ? 'el Banco' : this.room()?.players.find((p) => p.id === data.toId)?.name ?? 'otro jugador';
     if (!roomId) return;
-    this.runOp(() => this.bank.transfer(roomId, me, data.toId, data.amount, data.reason));
+    this.runOp(
+      () => this.bank.transfer(roomId, me, data.toId, data.amount, data.reason),
+      {
+        message: 'Transferencia realizada',
+        detail: `Enviaste ${this.format(data.amount)} a ${toName}`,
+        sound: 'transfer',
+      },
+    );
   }
 
   protected onBuy(data: { propertyId: string }): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
+    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
-    this.runOp(() => this.properties.buyProperty(roomId, edition, me, data.propertyId));
+    this.runOp(
+      () => this.properties.buyProperty(roomId, edition, me, data.propertyId),
+      { message: 'Propiedad comprada', detail: propertyName, sound: 'buy' },
+    );
   }
 
   protected onRent(data: { propertyId: string; amount: number }): void {
@@ -161,15 +228,22 @@ export class GameComponent {
     const owner = room?.players.find((player) =>
       player.properties.some((pp) => pp.propertyId === data.propertyId),
     );
+    const propertyName = this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !owner) return;
-    this.runOp(() =>
-      this.bank.transfer(
-        roomId,
-        me,
-        owner.id,
-        data.amount,
-        `Alquiler de ${this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? ''}`,
-      ),
+    this.runOp(
+      () =>
+        this.bank.transfer(
+          roomId,
+          me,
+          owner.id,
+          data.amount,
+          `Alquiler de ${propertyName}`,
+        ),
+      {
+        message: 'Alquiler pagado',
+        detail: `${this.format(data.amount)} a ${owner.name}`,
+        sound: 'cashOut',
+      },
     );
   }
 
@@ -177,22 +251,31 @@ export class GameComponent {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
+    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
-    this.runOp(() => this.properties.mortgage(roomId, edition, me, data.propertyId));
+    this.runOp(
+      () => this.properties.mortgage(roomId, edition, me, data.propertyId),
+      { message: 'Hipoteca creada', detail: propertyName, sound: 'cashIn' },
+    );
   }
 
   protected onUnmortgage(data: { propertyId: string }): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
+    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
-    this.runOp(() => this.properties.unmortgage(roomId, edition, me, data.propertyId));
+    this.runOp(
+      () => this.properties.unmortgage(roomId, edition, me, data.propertyId),
+      { message: 'Hipoteca pagada', detail: propertyName, sound: 'cashOut' },
+    );
   }
 
   protected onBuild(data: { propertyId: string; mode: 'house' | 'hotel' | 'sell-house' | 'sell-hotel' }): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
+    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
     this.runOp(async () => {
       switch (data.mode) {
@@ -209,6 +292,10 @@ export class GameComponent {
           await this.properties.sellHotel(roomId, edition, me, data.propertyId);
           break;
       }
+    }, {
+      message: data.mode.startsWith('sell') ? 'Edificio vendido' : 'Construcción realizada',
+      detail: propertyName,
+      sound: 'build',
     });
   }
 
@@ -217,7 +304,10 @@ export class GameComponent {
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
     if (!roomId || !edition) return;
-    this.runOp(() => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida'));
+    this.runOp(
+      () => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida'),
+      { message: 'Sueldo cobrado', detail: this.format(edition.goSalary), sound: 'cashIn' },
+    );
   }
 
   protected onBankTax(type: 'income' | 'luxury'): void {
@@ -227,14 +317,26 @@ export class GameComponent {
     if (!roomId || !edition) return;
     const amount = type === 'income' ? edition.incomeTax : edition.luxuryTax;
     const name = type === 'income' ? 'Impuesto sobre la renta' : 'Impuesto de lujo';
-    this.runOp(() => this.bank.payTax(roomId, me, amount, name));
+    this.runOp(
+      () => this.bank.payTax(roomId, me, amount, name),
+      { message: 'Impuesto pagado', detail: `${name}: ${this.format(amount)}`, sound: 'cashOut' },
+    );
   }
 
-  protected onDeclareBankruptcy(): void {
+  protected promptBankruptcy(): void {
+    this.confirmBankruptcyOpen.set(true);
+  }
+
+  protected onBankruptcyConfirmed(confirmed: boolean): void {
+    this.confirmBankruptcyOpen.set(false);
+    if (!confirmed) return;
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
     if (!roomId) return;
-    this.runOp(() => this.bank.declareBankruptcy(roomId, me));
+    this.runOp(
+      () => this.bank.declareBankruptcy(roomId, me),
+      { message: 'Bancarrota declarada', detail: 'Estás fuera de la partida', sound: 'error' },
+    );
   }
 
   protected onProposeTrade(data: {
@@ -246,22 +348,28 @@ export class GameComponent {
   }): void {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
+    const toName = this.room()?.players.find((p) => p.id === data.toId)?.name ?? '';
     if (!roomId) return;
-    this.runOp(() =>
-      this.tradeService.create(
-        roomId,
-        me,
-        data.toId,
-        { cash: data.fromCash, propertyIds: data.fromProperties },
-        { cash: data.toCash, propertyIds: data.toProperties },
-      ),
+    this.runOp(
+      () =>
+        this.tradeService.create(
+          roomId,
+          me,
+          data.toId,
+          { cash: data.fromCash, propertyIds: data.fromProperties },
+          { cash: data.toCash, propertyIds: data.toProperties },
+        ),
+      { message: 'Intercambio propuesto', detail: `Oferta enviada a ${toName}`, sound: 'transfer' },
     );
   }
 
   protected acceptTrade(offerId: string): void {
     const roomId = this.roomId();
     if (!roomId) return;
-    this.runOp(() => this.tradeService.accept(roomId, offerId));
+    this.runOp(
+      () => this.tradeService.accept(roomId, offerId),
+      { message: 'Intercambio aceptado', detail: 'La propiedad y dinero se han transferido', sound: 'transfer' },
+    );
   }
 
   protected rejectTrade(offerId: string): void {
@@ -270,20 +378,36 @@ export class GameComponent {
     this.runOp(() => this.tradeService.reject(roomId, offerId));
   }
 
-  protected async finishGame(): Promise<void> {
+  protected promptFinishGame(): void {
+    this.confirmFinishOpen.set(true);
+  }
+
+  protected async onFinishConfirmed(confirmed: boolean): Promise<void> {
+    this.confirmFinishOpen.set(false);
+    if (!confirmed) return;
     const roomId = this.roomId();
     if (!roomId) return;
-    await this.gameState.runInTransaction(roomId, (room) => ({ ...room, status: 'finished' }));
-    this.router.navigate(['/history', roomId]);
+    try {
+      await this.gameState.runInTransaction(roomId, (room) => ({ ...room, status: 'finished' }));
+      this.router.navigate(['/history', roomId]);
+    } catch (e) {
+      this.toastService.error(mapFirebaseError(e));
+      this.soundService.play('error');
+    }
   }
 
   protected async leave(): Promise<void> {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
     if (!roomId) return;
-    await this.roomService.leaveRoom(roomId, me);
-    this.gameState.unsubscribe();
-    this.router.navigate(['/']);
+    try {
+      await this.roomService.leaveRoom(roomId, me);
+      this.gameState.unsubscribe();
+      this.router.navigate(['/']);
+    } catch (e) {
+      this.toastService.error(mapFirebaseError(e));
+      this.soundService.play('error');
+    }
   }
 
   protected async joinGame(): Promise<void> {
@@ -294,14 +418,56 @@ export class GameComponent {
     try {
       await this.roomService.joinRoom(roomId, name);
     } catch (e) {
-      this.toast.set(mapFirebaseError(e));
+      this.toastService.error(mapFirebaseError(e));
+      this.soundService.play('error');
     } finally {
       this.joining.set(false);
     }
   }
 
-  protected openTransferTo(playerId: string): void {
-    // TODO: prefill transfer modal with player as destination.
-    this.activeAction.set('transfer');
+  protected openPropertyDetail(property: PropertyMetadata): void {
+    const me = this.currentPlayer();
+    const owned = me?.properties.find((pp) => pp.propertyId === property.id);
+    this.selectedProperty.set(property);
+    this.selectedPropertyActions.set({
+      canMortgage: !!owned && !owned.mortgaged && owned.houses === 0 && !owned.hasHotel,
+      canUnmortgage: !!owned && owned.mortgaged,
+      canBuild: !!owned && !owned.mortgaged && !property.isRailroad && !property.isUtility,
+    });
+  }
+
+  protected closePropertyDetail(): void {
+    this.selectedProperty.set(undefined);
+  }
+
+  protected onPropertyAction(actionId: string): void {
+    const property = this.selectedProperty();
+    if (!property) return;
+    this.closePropertyDetail();
+    switch (actionId) {
+      case 'buy':
+        this.onBuy({ propertyId: property.id });
+        break;
+      case 'mortgage':
+        this.activeAction.set('mortgage');
+        break;
+      case 'unmortgage':
+        this.activeAction.set('unmortgage');
+        break;
+      case 'build':
+        this.activeAction.set('build');
+        break;
+    }
+  }
+
+  private format(amount: number): string {
+    const currency = this.edition()?.currency;
+    if (!currency) return `${amount}`;
+    const symbol = currency.symbol;
+    return `${symbol}${amount.toLocaleString('es-ES')}`;
+  }
+
+  protected toggleSound(): void {
+    this.soundService.toggle();
   }
 }

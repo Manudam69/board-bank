@@ -1,14 +1,25 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import type { CurrencyConfig, Player, Room, TransactionLogEntry } from '../../../core/models';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
+import { ICONS } from '../../icons';
 
-type EnrichedLog = TransactionLogEntry & { fromName?: string; toName?: string; formattedAmount: string };
+interface EnrichedLog extends TransactionLogEntry {
+  fromName?: string;
+  toName?: string;
+  formattedAmount: string;
+  isIncoming: boolean;
+  isOutgoing: boolean;
+  timeAgo: string;
+}
+
+const ONE_MINUTE = 60_000;
+const ONE_HOUR = 60 * ONE_MINUTE;
+const ONE_DAY = 24 * ONE_HOUR;
 
 @Component({
   selector: 'app-log-feed',
   standalone: true,
-  imports: [DatePipe],
+  imports: [],
   templateUrl: './log-feed.component.html',
 })
 export class LogFeedComponent {
@@ -16,20 +27,48 @@ export class LogFeedComponent {
 
   readonly room = input.required<Room>();
   readonly currency = input.required<CurrencyConfig>();
+  readonly perspectivePlayerId = input<string | undefined>(undefined);
+
+  protected readonly icons = ICONS;
 
   protected logs = computed<EnrichedLog[]>(() => {
-    const players = new Map<string, Player>(
-      this.room().players.map((p) => [p.id, p]),
-    );
+    const players = new Map<string, Player>(this.room().players.map((p) => [p.id, p]));
+    const me = this.perspectivePlayerId();
+    const now = Date.now();
     return [...this.room().log]
       .sort((a, b) => b.timestamp - a.timestamp)
-      .map((entry) => ({
-        ...entry,
-        fromName: entry.fromPlayerId === 'bank' ? 'Banco' : players.get(entry.fromPlayerId ?? '')?.name,
-        toName: entry.toPlayerId === 'bank' ? 'Banco' : players.get(entry.toPlayerId ?? '')?.name,
-        formattedAmount: this.formatter.format(entry.amount, this.currency()),
-      }));
+      .map((entry) => {
+        const isIncoming = !!me && entry.toPlayerId === me && entry.amount > 0;
+        const isOutgoing = !!me && entry.fromPlayerId === me && entry.amount > 0;
+        return {
+          ...entry,
+          fromName: entry.fromPlayerId === 'bank' ? 'Banco' : players.get(entry.fromPlayerId ?? '')?.name,
+          toName: entry.toPlayerId === 'bank' ? 'Banco' : players.get(entry.toPlayerId ?? '')?.name,
+          formattedAmount: this.formatter.format(entry.amount, this.currency()),
+          isIncoming,
+          isOutgoing,
+          timeAgo: this.timeAgo(entry.timestamp, now),
+        };
+      });
   });
+
+  protected typeIcon(type: TransactionLogEntry['type']): string {
+    const map: Record<TransactionLogEntry['type'], string> = {
+      transfer: this.icons['arrow-left-right'],
+      'buy-property': this.icons['shopping-cart'],
+      'pay-rent': this.icons['banknote'],
+      mortgage: this.icons['lock'],
+      unmortgage: this.icons['lock-open'],
+      'build-houses': this.icons['hammer'],
+      'sell-houses': this.icons['minus'],
+      salary: this.icons['circle-dollar-sign'],
+      tax: this.icons['circle-dollar-sign'],
+      'bank-fee': this.icons['banknote'],
+      trade: this.icons['arrow-left-right'],
+      bankruptcy: this.icons['alert-triangle'],
+    };
+    return map[type];
+  }
 
   protected typeLabel(type: TransactionLogEntry['type']): string {
     const labels: Record<TransactionLogEntry['type'], string> = {
@@ -47,5 +86,20 @@ export class LogFeedComponent {
       bankruptcy: 'Quiebra',
     };
     return labels[type];
+  }
+
+  private timeAgo(timestamp: number, now = Date.now()): string {
+    const diff = now - timestamp;
+    if (diff < ONE_MINUTE) return 'Ahora mismo';
+    if (diff < ONE_HOUR) {
+      const m = Math.floor(diff / ONE_MINUTE);
+      return `Hace ${m} min`;
+    }
+    if (diff < ONE_DAY) {
+      const h = Math.floor(diff / ONE_HOUR);
+      return `Hace ${h} h`;
+    }
+    const d = Math.floor(diff / ONE_DAY);
+    return d === 1 ? 'Ayer' : `Hace ${d} días`;
   }
 }

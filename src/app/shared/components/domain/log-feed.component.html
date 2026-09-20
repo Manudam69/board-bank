@@ -1,28 +1,61 @@
-<div class="space-y-2">
+<div class="space-y-1">
   @for (entry of logs(); track entry.id) {
-    <div class="rounded-xl border border-border bg-surface p-3">
-      <div class="flex items-center justify-between">
-        <span class="rounded-full bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary">
-          {{ typeLabel(entry.type) }}
-        </span>
-        <time class="text-xs text-text-muted" [attr.datetime]="entry.timestamp">
-          {{ entry.timestamp | date: 'HH:mm:ss' }}
-        </time>
+    <div class="group flex items-start gap-3 rounded-xl border border-border bg-surface p-3 transition hover:border-surface-hover">
+      <div
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        [class.bg-positive-muted]="entry.isIncoming"
+        [class.text-positive]="entry.isIncoming"
+        [class.bg-negative-muted]="entry.isOutgoing"
+        [class.text-negative]="entry.isOutgoing"
+        [class.bg-surface-elevated]="!entry.isIncoming && !entry.isOutgoing"
+        [class.text-text-secondary]="!entry.isIncoming && !entry.isOutgoing"
+      >
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          @if (entry.isIncoming) {
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-up']" />
+          } @else if (entry.isOutgoing) {
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-down']" />
+          } @else {
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="typeIcon(entry.type)" />
+          }
+        </svg>
       </div>
-      <p class="mt-1 text-sm text-text">{{ entry.description }}</p>
-      <div class="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
-        @if (entry.fromName) {
-          <span>De: <span class="text-text">{{ entry.fromName }}</span></span>
-        }
-        @if (entry.toName) {
-          <span>A: <span class="text-text">{{ entry.toName }}</span></span>
-        }
-        @if (entry.amount > 0) {
-          <span class="font-medium text-text">{{ entry.formattedAmount }}</span>
-        }
+
+      <div class="min-w-0 flex-1">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="text-sm font-medium text-text">{{ entry.description }}</p>
+            <p class="mt-0.5 text-xs text-text-muted">
+              {{ typeLabel(entry.type) }}
+              @if (entry.fromName || entry.toName) {
+                ·
+                @if (entry.fromName) {
+                  <span>de {{ entry.fromName }}</span>
+                }
+                @if (entry.toName) {
+                  <span>a {{ entry.toName }}</span>
+                }
+              }
+            </p>
+          </div>
+
+          @if (entry.amount > 0) {
+            <span
+              class="shrink-0 text-sm font-semibold"
+              [class.text-positive]="entry.isIncoming"
+              [class.text-negative]="entry.isOutgoing"
+              [class.text-text]="!entry.isIncoming && !entry.isOutgoing"
+            >
+              {{ entry.isIncoming ? '+' : (entry.isOutgoing ? '-' : '') }}{{ entry.formattedAmount }}
+            </span>
+          }
+        </div>
+        <p class="mt-1 text-xs text-text-muted">{{ entry.timeAgo }}</p>
       </div>
     </div>
   } @empty {
-    <p class="text-center text-sm text-text-secondary">Aún no hay movimientos registrados.</p>
+    <div class="py-8 text-center">
+      <p class="text-sm text-text-secondary">Aún no hay movimientos registrados.</p>
+    </div>
   }
 </div>

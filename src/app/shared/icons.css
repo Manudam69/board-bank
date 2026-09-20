@@ -1,0 +1,84 @@
+.animate-fade-in {
+  animation: fade-in 150ms ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 250ms ease-out forwards;
+}
+
+.animate-sheet-in {
+  animation: sheet-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-in {
+  animation: toast-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-delta-up {
+  animation: delta-up 1400ms ease-out forwards;
+}
+
+.animate-pulse-balance {
+  animation: pulse-balance 250ms ease-out forwards;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.6s linear infinite;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-elevated) 25%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface-elevated) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Press feedback */
+.press-scale {
+  transition: transform 100ms ease-out;
+}
+
+.press-scale:active {
+  transform: scale(0.96);
+}
+
+/* Touch optimization */
+button,
+a,
+[role='button'],
+[role='menuitem'] {
+  touch-action: manipulation;
+}
+
+/* Hide on mobile / desktop helpers */
+@media (max-width: 639px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Reduced motion overrides for custom animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-sheet-in,
+  .animate-scale-in,
+  .animate-toast-in,
+  .animate-delta-up,
+  .animate-pulse-balance,
+  .animate-shimmer {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

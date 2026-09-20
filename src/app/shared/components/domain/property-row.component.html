@@ -1,0 +1,66 @@
+<button
+  type="button"
+  class="group flex w-full items-center gap-4 px-1 py-3 text-left transition hover:bg-surface-elevated/50 focus:outline-none"
+  [class.opacity-50]="disabled()"
+  [class.cursor-not-allowed]="disabled()"
+  [disabled]="disabled()"
+  (click)="onClick()"
+  [attr.aria-label]="ariaLabel()"
+>
+  <div class="flex flex-1 items-center gap-3 min-w-0">
+    <span
+      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+      [style.background-color]="property().groupColor"
+      [class.text-text]="needsDarkText()"
+      [class.text-white]="!needsDarkText()"
+      [class.ring-1]="needsBorder()"
+      [class.ring-border]="needsBorder()"
+    >
+      {{ property().group.slice(0, 2).toUpperCase() }}
+    </span>
+    <div class="min-w-0">
+      <p class="truncate text-sm font-medium text-text">{{ property().name }}</p>
+      <p class="truncate text-xs text-text-muted">{{ property().group }}</p>
+    </div>
+  </div>
+
+  <div class="shrink-0 text-right">
+    <p class="text-sm font-medium text-text">{{ property().price | money: currency() }}</p>
+    @if (isOwned()) {
+      <p class="text-xs text-text-muted">Hipoteca {{ property().mortgageValue | money: currency() }}</p>
+    }
+  </div>
+
+  @if (selectable()) {
+    <div class="shrink-0 pl-2">
+      @if (selected()) {
+        <div class="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      } @else {
+        <div class="h-5 w-5 rounded-full border-2 border-border"></div>
+      }
+    </div>
+  } @else {
+    <div class="flex shrink-0 items-center gap-2">
+      @if (buildingSummary(); as summary) {
+        <span class="rounded bg-surface-elevated px-1.5 py-0.5 text-xs text-text-secondary">{{ summary }}</span>
+      }
+      @if (isMortgaged()) {
+        <span class="rounded bg-warning-muted px-1.5 py-0.5 text-xs text-warning">Hip.</span>
+      }
+      <svg
+        class="h-5 w-5 text-text-muted"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="ICONS['chevronRight']" />
+      </svg>
+    </div>
+  }
+</button>

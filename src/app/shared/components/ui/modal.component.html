@@ -1,12 +1,15 @@
 @if (open()) {
   <div
-    class="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 backdrop-blur-sm sm:items-center"
+    [class]="backdropClasses()"
     role="dialog"
-    [attr.aria-modal]="true"
+    aria-modal="true"
     [attr.aria-label]="title()"
     (click)="close()"
+    (keydown.escape)="onKeydown($event)"
+    tabindex="-1"
   >
     <div [class]="dialogClasses()" (click)="$event.stopPropagation()">
+      <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-border sm:hidden" aria-hidden="true"></div>
       <div class="mb-4 flex items-center justify-between gap-4">
         @if (title()) {
           <h2 class="text-lg font-semibold text-text">{{ title() }}</h2>
@@ -16,7 +19,7 @@
         @if (closeable()) {
           <button
             type="button"
-            class="rounded-full p-1 text-text-muted hover:bg-surface-elevated hover:text-text focus:outline-none"
+            class="focus-ring-inset rounded-full p-1 text-text-muted transition hover:bg-surface-elevated hover:text-text focus:outline-none"
             aria-label="Cerrar"
             (click)="close()"
           >

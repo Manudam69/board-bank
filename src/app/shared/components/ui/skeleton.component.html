@@ -1,0 +1,21 @@
+<div class="space-y-2" role="status" aria-label="Cargando">
+  @for (item of items(); track $index) {
+    @switch (variant()) {
+      @case ('circle') {
+        <div class="h-10 w-10 animate-shimmer rounded-full" [style.width]="width()"></div>
+      }
+      @case ('card') {
+        <div class="animate-shimmer h-24 rounded-xl" [style.width]="width()"></div>
+      }
+      @case ('text') {
+        <div class="space-y-2">
+          <div class="animate-shimmer h-4 w-2/3 rounded" [style.width]="width()"></div>
+          <div class="animate-shimmer h-3 w-1/2 rounded" [style.width]="width()"></div>
+        </div>
+      }
+      @default {
+        <div class="animate-shimmer h-3 rounded" [style.width]="width()"></div>
+      }
+    }
+  }
+</div>

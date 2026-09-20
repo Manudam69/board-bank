@@ -1,14 +1,14 @@
-<div class="rounded-lg bg-surface-elevated/50 p-1">
-  <nav class="flex gap-1" aria-label="Pestañas">
+<nav class="hide-mobile" aria-label="Pestañas">
+  <div class="flex gap-1 rounded-full border border-border bg-surface p-1">
     @for (tab of tabs(); track tab.id) {
       <button
         type="button"
-        class="inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none"
-        [class.bg-surface]="activeTab() === tab.id"
+        class="group relative inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
         [class.text-text]="activeTab() === tab.id"
-        [class.shadow-sm]="activeTab() === tab.id"
         [class.text-text-secondary]="activeTab() !== tab.id"
         [class.hover:text-text]="activeTab() !== tab.id"
+        [class.bg-surface-elevated]="activeTab() === tab.id"
+        [class.shadow-sm]="activeTab() === tab.id"
         (click)="activeTab.set(tab.id)"
         [attr.aria-current]="activeTab() === tab.id ? 'page' : null"
       >
@@ -20,5 +20,5 @@
         {{ tab.label }}
       </button>
     }
-  </nav>
-</div>
+  </div>
+</nav>

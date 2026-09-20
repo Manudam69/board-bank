@@ -1,0 +1,52 @@
+@if (toastService.toasts().length > 0) {
+  <div
+    class="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center gap-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-4 sm:right-4 sm:left-auto sm:items-end sm:p-0 sm:pb-0"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    @for (toast of toastService.toasts(); track toast.id) {
+      <div
+        class="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-3 shadow-lg animate-toast-in sm:w-80"
+        role="status"
+        [class.border-positive/40]="toast.type === 'success'"
+        [class.border-negative/40]="toast.type === 'error'"
+      >
+        <div class="mt-0.5 shrink-0">
+          @switch (toast.type) {
+            @case ('success') {
+                <svg class="h-5 w-5 text-positive" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['check']" />
+                </svg>
+            }
+            @case ('error') {
+              <svg class="h-5 w-5 text-negative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['alert-triangle']" />
+              </svg>
+            }
+            @default {
+              <svg class="h-5 w-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['info']" />
+              </svg>
+            }
+          }
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-text">{{ toast.message }}</p>
+          @if (toast.detail) {
+            <p class="mt-0.5 text-xs text-text-secondary">{{ toast.detail }}</p>
+          }
+        </div>
+        <button
+          type="button"
+          class="focus-ring-inset mt-0.5 shrink-0 rounded p-0.5 text-text-muted transition hover:text-text focus:outline-none"
+          aria-label="Cerrar notificación"
+          (click)="toastService.dismiss(toast.id)"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['x']" />
+          </svg>
+        </button>
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,28 @@
+<div class="relative inline-flex flex-col items-start">
+  <app-money-display
+    [amount]="amount()"
+    [currency]="currency()"
+    [size]="size()"
+    [class.animate-pulse-balance]="deltaFormatted() !== null"
+  />
+
+  @if (deltaFormatted(); as deltaValue) {
+    <div
+      class="pointer-events-none absolute left-full top-0 ml-1.5 flex items-center gap-0.5 whitespace-nowrap text-xs font-semibold animate-delta-up"
+      [class.text-positive]="deltaPositive()"
+      [class.text-negative]="!deltaPositive()"
+      aria-hidden="true"
+    >
+      @if (deltaPositive()) {
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-up']" />
+        </svg>
+      } @else {
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-down']" />
+        </svg>
+      }
+      {{ deltaPositive() ? '+' : '' }}{{ deltaValue | money: currency() }}
+    </div>
+  }
+</div>

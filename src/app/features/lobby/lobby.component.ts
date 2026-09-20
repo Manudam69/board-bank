@@ -43,6 +43,7 @@ export class LobbyComponent {
   readonly canStart = computed(() => (this.room()?.players.length ?? 0) >= 2);
   readonly starting = signal(false);
   readonly leaving = signal(false);
+  readonly copied = signal(false);
 
   constructor() {
     effect(() => {
@@ -60,6 +61,18 @@ export class LobbyComponent {
     });
 
     this.destroyRef.onDestroy(() => this.gameState.unsubscribe());
+  }
+
+  protected async copyCode(): Promise<void> {
+    const code = this.room()?.id;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    } catch {
+      this.copied.set(false);
+    }
   }
 
   protected async startGame(): Promise<void> {

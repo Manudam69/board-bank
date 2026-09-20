@@ -1,9 +1,9 @@
 <div class="space-y-1">
-  <label class="block text-sm font-medium text-slate-700">{{ label() }}</label>
+  <label class="block text-sm font-medium text-text-secondary">{{ label() }}</label>
   <div class="flex items-center gap-2">
     <button
       type="button"
-      class="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+      class="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-text-secondary hover:bg-surface-hover disabled:opacity-50"
       [disabled]="disabled()"
       (click)="adjust(-step())"
       aria-label="Disminuir"
@@ -16,16 +16,16 @@
       [value]="amount()"
       [placeholder]="placeholder()"
       [disabled]="disabled()"
-      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-center text-text focus:border-accent focus:outline-none"
       (input)="onInput($any($event).target.value)"
     />
     <button
       type="button"
-      class="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+      class="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-text-secondary hover:bg-surface-hover disabled:opacity-50"
       [disabled]="disabled()"
       (click)="adjust(step())"
       aria-label="Aumentar"
     >+</button>
   </div>
-  <p class="text-sm text-slate-500">Vista previa: {{ preview() }}</p>
+  <p class="text-xs text-text-muted">Vista previa: <span class="font-medium text-text">{{ preview() }}</span></p>
 </div>

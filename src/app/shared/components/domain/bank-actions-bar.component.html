@@ -1,9 +1,48 @@
-<div class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
-  <app-button size="sm" (clickAction)="action.emit('transfer')">Transferir</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('buy')">Comprar</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('rent')">Alquiler</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('mortgage')">Hipotecar</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('unmortgage')">Deshipotecar</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('build')">Construir</app-button>
-  <app-button size="sm" variant="secondary" (clickAction)="action.emit('trade')">Intercambiar</app-button>
+<div class="flex flex-wrap items-start gap-2" (mouseleave)="showMore.set(false)">
+  @for (action of primaryActions; track action.id) {
+    <app-button
+      [variant]="$first ? 'primary' : 'secondary'"
+      size="sm"
+      (clickAction)="emit(action.id)"
+    >
+      <span class="inline-flex items-center gap-1.5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="action.icon" />
+        </svg>
+        {{ action.label }}
+      </span>
+    </app-button>
+  }
+
+  <div class="relative">
+    <app-button variant="ghost" size="sm" (clickAction)="showMore.set(!showMore())">
+      <span class="inline-flex items-center gap-1.5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+        </svg>
+        Más
+      </span>
+    </app-button>
+
+    @if (showMore()) {
+      <div
+        class="absolute right-0 z-20 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
+        role="menu"
+      >
+        @for (action of secondaryActions; track action.id) {
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none"
+            role="menuitem"
+            (click)="emit(action.id)"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="action.icon" />
+            </svg>
+            {{ action.label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
 </div>

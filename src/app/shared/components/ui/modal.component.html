@@ -1,22 +1,22 @@
 @if (open()) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    class="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 backdrop-blur-sm sm:items-center"
     role="dialog"
     [attr.aria-modal]="true"
     [attr.aria-label]="title()"
     (click)="close()"
   >
     <div [class]="dialogClasses()" (click)="$event.stopPropagation()">
-      <div class="mb-4 flex items-center justify-between">
+      <div class="mb-4 flex items-center justify-between gap-4">
         @if (title()) {
-          <h2 class="text-xl font-semibold text-slate-900">{{ title() }}</h2>
+          <h2 class="text-lg font-semibold text-text">{{ title() }}</h2>
         } @else {
           <span></span>
         }
         @if (closeable()) {
           <button
             type="button"
-            class="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            class="rounded-full p-1 text-text-muted hover:bg-surface-elevated hover:text-text focus:outline-none"
             aria-label="Cerrar"
             (click)="close()"
           >
@@ -26,7 +26,7 @@
           </button>
         }
       </div>
-      <div class="text-slate-800">
+      <div class="text-text-secondary">
         <ng-content></ng-content>
       </div>
     </div>

@@ -1,4 +1,10 @@
-import { Component, input, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 @Component({
   selector: 'app-modal',
@@ -21,7 +27,7 @@ export class ModalComponent {
       lg: 'max-w-2xl',
       xl: 'max-w-4xl',
     };
-    return `relative w-full rounded-2xl bg-white p-6 shadow-2xl ${map[this.size()]}`;
+    return `relative w-full rounded-modal bg-surface border border-border p-6 shadow-2xl shadow-black/40 ${map[this.size()]}`;
   }
 
   protected close(): void {
@@ -29,4 +35,6 @@ export class ModalComponent {
       this.closeAction.emit();
     }
   }
+
+  constructor(private readonly elementRef: ElementRef) {}
 }

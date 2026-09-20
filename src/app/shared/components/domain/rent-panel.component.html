@@ -1,29 +1,32 @@
 <div class="space-y-4">
-  <p class="text-sm text-slate-600">Pagas: <strong>{{ me().name }}</strong> ({{ me().cash | money: currency() }})</p>
+  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
+    Pagas: <span class="font-semibold text-text">{{ me().name }}</span>
+    <span class="ml-2 text-text-secondary">{{ me().cash | money: currency() }}</span>
+  </div>
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <div class="space-y-1">
-      <label class="block text-sm font-medium text-slate-700" for="dice">Suma de dados (servicios)</label>
+      <label class="block text-sm font-medium text-text-secondary" for="dice">Suma de dados (servicios)</label>
       <input
         id="dice"
         type="number"
         min="2"
         max="12"
-        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
         [(ngModel)]="diceSum"
       />
     </div>
   </div>
 
   @if (rentInfo()) {
-    <div class="rounded-lg bg-blue-50 p-4">
-      <p class="text-sm text-blue-900">
-        Alquiler calculado:
+    <div class="rounded-lg border border-accent/30 bg-accent-muted p-4">
+      <div class="flex items-center justify-between">
+        <p class="text-sm text-text-secondary">Alquiler calculado</p>
         <app-money-display [amount]="rentInfo()!.amount" [currency]="currency()" size="lg" />
-      </p>
-      <p class="text-xs text-blue-700">{{ rentInfo()!.reason }}</p>
+      </div>
+      <p class="mt-1 text-xs text-text-muted">{{ rentInfo()!.reason }}</p>
       @if (ownerName()) {
-        <p class="text-xs text-blue-700">Propietario: {{ ownerName() }}</p>
+        <p class="text-xs text-text-muted">Propietario: <span class="text-text-secondary">{{ ownerName() }}</span></p>
       }
     </div>
   }
@@ -38,7 +41,7 @@
         (propertyClick)="onSelect(property)"
       />
     } @empty {
-      <p class="col-span-full text-center text-sm text-slate-500">No hay propiedades con dueño distinto a ti.</p>
+      <p class="col-span-full text-center text-sm text-text-secondary">No hay propiedades con dueño distinto a ti.</p>
     }
   </div>
 

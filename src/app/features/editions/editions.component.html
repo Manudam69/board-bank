@@ -1,121 +1,236 @@
 <div class="mx-auto max-w-5xl px-4 py-8">
   <div class="mb-6 flex items-center justify-between">
-    <h1 class="text-3xl font-bold text-slate-900">Ediciones</h1>
+    <h1 class="text-2xl font-bold text-text">Ediciones</h1>
     <div class="flex gap-2">
-      <app-button variant="secondary" (clickAction)="router.navigate(['/'])">Volver</app-button>
+      <app-button variant="secondary" size="sm" (clickAction)="router.navigate(['/'])">Volver</app-button>
       <app-button (clickAction)="openNew()">Nueva edición</app-button>
     </div>
   </div>
 
   <div class="space-y-3">
     @for (edition of editions(); track edition.id) {
-      <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900">{{ edition.name }}</h2>
-          <p class="text-sm text-slate-500">
+      <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+        <div class="min-w-0">
+          <h2 class="text-base font-semibold text-text">{{ edition.name }}</h2>
+          <p class="text-sm text-text-secondary">
             {{ edition.description }} — {{ edition.properties.length }} propiedades — Dinero inicial: {{ edition.startingMoney | money: edition.currency }}
           </p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex shrink-0 gap-2">
           @if (!edition.readonly) {
-            <app-button variant="secondary" size="sm" (clickAction)="edit(edition)">Editar</app-button>
-            <app-button variant="danger" size="sm" (clickAction)="deleteEdition(edition.id)">Eliminar</app-button>
+            <app-button variant="ghost" size="sm" (clickAction)="edit(edition)">Editar</app-button>
+            <app-button variant="danger" size="sm" (clickAction)="promptDelete(edition.id)">Eliminar</app-button>
           } @else {
-            <span class="text-sm text-slate-400">Predefinida</span>
+            <span class="text-sm text-text-muted">Predefinida</span>
           }
         </div>
       </div>
     } @empty {
-      <p class="text-center text-slate-500">No hay ediciones disponibles.</p>
+      <p class="text-center text-sm text-text-secondary">No hay ediciones disponibles.</p>
     }
   </div>
 </div>
 
 <app-modal [open]="showEditor()" title="Editor de edición" size="xl" (closeAction)="showEditor.set(false)">
-  <div class="space-y-4">
+  <div class="space-y-5">
     @if (error()) {
-      <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ error() }}</div>
+      <div class="rounded-lg border border-negative/30 bg-danger-muted p-3 text-sm text-negative" role="alert">{{ error() }}</div>
     }
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Nombre</label>
-        <input type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="name" />
+        <label class="block text-sm font-medium text-text-secondary">Nombre</label>
+        <input
+          type="text"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+          [(ngModel)]="name"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Descripción</label>
-        <input type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="description" />
+        <label class="block text-sm font-medium text-text-secondary">Descripción</label>
+        <input
+          type="text"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+          [(ngModel)]="description"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Símbolo moneda</label>
-        <input type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="symbol" />
+        <label class="block text-sm font-medium text-text-secondary">Símbolo moneda</label>
+        <input
+          type="text"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+          [(ngModel)]="symbol"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Escala</label>
-        <select class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="scale">
-          <option value="units">Unidades</option>
-          <option value="thousands">Miles (k)</option>
-          <option value="millions">Millones (M)</option>
-        </select>
+        <label class="block text-sm font-medium text-text-secondary">Escala</label>
+        <div class="relative">
+          <select
+            class="w-full appearance-none rounded-lg border border-border bg-surface-elevated px-3 py-2.5 pr-10 text-text focus:border-accent focus:outline-none"
+            [(ngModel)]="scale"
+          >
+            <option value="units">Unidades</option>
+            <option value="thousands">Miles (k)</option>
+            <option value="millions">Millones (M)</option>
+          </select>
+          <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Dinero inicial</label>
-        <input type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="startingMoney" />
+        <label class="block text-sm font-medium text-text-secondary">Dinero inicial</label>
+        <input
+          type="number"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+          [(ngModel)]="startingMoney"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Sueldo salida</label>
-        <input type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="goSalary" />
+        <label class="block text-sm font-medium text-text-secondary">Sueldo salida</label>
+        <input
+          type="number"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+          [(ngModel)]="goSalary"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Multa cárcel</label>
-        <input type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="jailFine" />
+        <label class="block text-sm font-medium text-text-secondary">Multa cárcel</label>
+        <input
+          type="number"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+          [(ngModel)]="jailFine"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Impuesto renta</label>
-        <input type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="incomeTax" />
+        <label class="block text-sm font-medium text-text-secondary">Impuesto renta</label>
+        <input
+          type="number"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+          [(ngModel)]="incomeTax"
+        />
       </div>
       <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700">Impuesto lujo</label>
-        <input type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2" [(ngModel)]="luxuryTax" />
+        <label class="block text-sm font-medium text-text-secondary">Impuesto lujo</label>
+        <input
+          type="number"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
+          [(ngModel)]="luxuryTax"
+        />
       </div>
     </div>
 
-    <h3 class="text-lg font-semibold text-slate-900">Propiedades</h3>
-    <div class="max-h-96 space-y-3 overflow-y-auto pr-1">
+    <h3 class="text-base font-semibold text-text">Propiedades</h3>
+    <div class="max-h-96 space-y-2 overflow-y-auto pr-1">
       @for (property of properties(); track property.id; let i = $index) {
-        <div class="rounded-xl border border-slate-200 p-3">
-          <div class="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <input type="text" placeholder="Nombre" class="rounded border px-2 py-1" [(ngModel)]="property.name" />
-            <input type="text" placeholder="Grupo" class="rounded border px-2 py-1" [(ngModel)]="property.group" />
-            <input type="color" class="h-9 rounded border px-2 py-1" [(ngModel)]="property.groupColor" />
-            <input type="number" placeholder="Precio" class="rounded border px-2 py-1" [(ngModel)]="property.price" />
-            <input type="number" placeholder="Hipoteca" class="rounded border px-2 py-1" [(ngModel)]="property.mortgageValue" />
-            <input type="number" placeholder="Orden" class="rounded border px-2 py-1" [(ngModel)]="property.order" />
-            <input type="number" placeholder="Casa" class="rounded border px-2 py-1" [(ngModel)]="property.houseCost" />
-            <input type="number" placeholder="Hotel" class="rounded border px-2 py-1" [(ngModel)]="property.hotelCost" />
-          </div>
-          <div class="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            @for (rent of property.rents; track $index; let level = $index) {
-              <div class="space-y-1">
-                <label class="text-xs text-slate-500">{{ level === 0 ? 'Base' : level === 5 ? 'Hotel' : level + ' casa(s)' }}</label>
+        <div class="overflow-hidden rounded-xl border border-border">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-surface-elevated"
+            (click)="toggleProperty(property.id)"
+          >
+            <span class="flex items-center gap-3">
+              <span class="h-4 w-4 rounded-full border border-border/50" [style.background-color]="property.groupColor"></span>
+              <span class="text-sm font-medium text-text">{{ property.name || 'Propiedad sin nombre' }}</span>
+            </span>
+            <span class="text-sm text-text-secondary">{{ property.price | money: { symbol: symbol(), code: 'CUSTOM', scale: scale() } }}</span>
+          </button>
+
+          @if (expandedProperty() === property.id) {
+            <div class="border-t border-border bg-surface-elevated/30 px-4 py-3">
+              <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <input
+                  type="text"
+                  placeholder="Nombre"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+                  [ngModel]="property.name"
+                  (ngModelChange)="updateProperty(i, { name: $event })"
+                />
+                <input
+                  type="text"
+                  placeholder="Grupo"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+                  [ngModel]="property.group"
+                  (ngModelChange)="updateProperty(i, { group: $event })"
+                />
+                <input
+                  type="color"
+                  class="h-9 w-full rounded-lg border border-border bg-surface px-2 py-1"
+                  [ngModel]="property.groupColor"
+                  (ngModelChange)="updateProperty(i, { groupColor: $event })"
+                />
                 <input
                   type="number"
-                  class="w-full rounded border px-2 py-1"
-                  [value]="rent"
-                  (input)="updateRent(i, level, +$any($event).target.value)"
+                  placeholder="Precio"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                  [ngModel]="property.price"
+                  (ngModelChange)="updateProperty(i, { price: +$event })"
+                />
+                <input
+                  type="number"
+                  placeholder="Hipoteca"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                  [ngModel]="property.mortgageValue"
+                  (ngModelChange)="updateProperty(i, { mortgageValue: +$event })"
+                />
+                <input
+                  type="number"
+                  placeholder="Orden"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                  [ngModel]="property.order"
+                  (ngModelChange)="updateProperty(i, { order: +$event })"
+                />
+                <input
+                  type="number"
+                  placeholder="Casa"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                  [ngModel]="property.houseCost"
+                  (ngModelChange)="updateProperty(i, { houseCost: +$event })"
+                />
+                <input
+                  type="number"
+                  placeholder="Hotel"
+                  class="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                  [ngModel]="property.hotelCost"
+                  (ngModelChange)="updateProperty(i, { hotelCost: +$event })"
                 />
               </div>
-            }
-          </div>
-          <div class="flex gap-2">
-            <label class="flex items-center gap-1 text-sm">
-              <input type="checkbox" [(ngModel)]="property.isRailroad" /> Ferrocarril
-            </label>
-            <label class="flex items-center gap-1 text-sm">
-              <input type="checkbox" [(ngModel)]="property.isUtility" /> Servicio
-            </label>
-            <button type="button" class="ml-auto text-sm text-red-600 hover:underline" (click)="removeProperty(i)">Eliminar</button>
-          </div>
+              <div class="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                @for (rent of property.rents; track $index; let level = $index) {
+                  <div class="space-y-1">
+                    <label class="text-xs text-text-muted">
+                      {{ level === 0 ? 'Base' : level === 5 ? 'Hotel' : level + ' casa(s)' }}
+                    </label>
+                    <input
+                      type="number"
+                      class="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
+                      [value]="rent"
+                      (input)="updateRent(i, level, +$any($event).target.value)"
+                    />
+                  </div>
+                }
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap gap-4">
+                  <label class="flex items-center gap-2 text-sm text-text-secondary">
+                    <input type="checkbox" [(ngModel)]="property.isRailroad" class="h-4 w-4 rounded border-border bg-surface text-accent focus:ring-accent" />
+                    Ferrocarril
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-text-secondary">
+                    <input type="checkbox" [(ngModel)]="property.isUtility" class="h-4 w-4 rounded border-border bg-surface text-accent focus:ring-accent" />
+                    Servicio
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  class="text-sm font-medium text-negative transition hover:text-danger-hover focus:outline-none"
+                  (click)="removeProperty(i)"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          }
         </div>
       }
     </div>
@@ -125,3 +240,11 @@
     <app-button [fullWidth]="true" [loading]="saving()" (clickAction)="save()">Guardar edición</app-button>
   </div>
 </app-modal>
+
+<app-confirm-dialog
+  [open]="showDeleteConfirm()"
+  title="¿Eliminar edición?"
+  message="Esta acción no se puede deshacer."
+  confirmLabel="Eliminar"
+  (confirmed)="onDeleteConfirmed($event)"
+/>

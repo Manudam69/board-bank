@@ -13,8 +13,8 @@ export class MoneyDisplayComponent {
   readonly amount = input.required<number>();
   readonly currency = input.required<CurrencyConfig>();
   readonly size = input<'sm' | 'md' | 'lg' | 'xl'>('md');
-  readonly positiveClass = input('text-emerald-600');
-  readonly negativeClass = input('text-rose-600');
+  readonly positiveClass = input('text-positive');
+  readonly negativeClass = input('text-negative');
 
   protected formatted = computed(() => this.formatter.format(this.amount(), this.currency()));
 

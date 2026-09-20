@@ -6,13 +6,14 @@ import { MoneyFormatService } from '../../core/services/money-format.service';
 import { IdService } from '../../core/services/id.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
+import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import type { CurrencyConfig, Edition, PropertyMetadata } from '../../core/models';
 
 @Component({
   selector: 'app-editions',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, ModalComponent, MoneyPipe],
+  imports: [FormsModule, ButtonComponent, ModalComponent, ConfirmDialogComponent, MoneyPipe],
   templateUrl: './editions.component.html',
 })
 export class EditionsComponent {
@@ -37,13 +38,17 @@ export class EditionsComponent {
   readonly properties = signal<PropertyMetadata[]>([]);
   readonly saving = signal(false);
   readonly error = signal('');
+  readonly expandedProperty = signal<string | undefined>(undefined);
+
+  readonly showDeleteConfirm = signal(false);
+  readonly deleteTargetId = signal<string | undefined>(undefined);
 
   protected newProperty(): PropertyMetadata {
     return {
       id: this.id.newId(),
       name: '',
       group: '',
-      groupColor: '#3B82F6',
+      groupColor: '#4F46E5',
       order: this.properties().length + 1,
       price: 0,
       mortgageValue: 0,
@@ -65,6 +70,7 @@ export class EditionsComponent {
     this.incomeTax.set(200);
     this.luxuryTax.set(100);
     this.properties.set([this.newProperty()]);
+    this.expandedProperty.set(undefined);
     this.showEditor.set(true);
     this.error.set('');
   }
@@ -82,12 +88,15 @@ export class EditionsComponent {
     this.incomeTax.set(edition.incomeTax);
     this.luxuryTax.set(edition.luxuryTax);
     this.properties.set(edition.properties.map((p) => ({ ...p })));
+    this.expandedProperty.set(undefined);
     this.showEditor.set(true);
     this.error.set('');
   }
 
   protected addProperty(): void {
-    this.properties.set([...this.properties(), this.newProperty()]);
+    const prop = this.newProperty();
+    this.properties.set([...this.properties(), prop]);
+    this.expandedProperty.set(prop.id);
   }
 
   protected removeProperty(index: number): void {
@@ -108,6 +117,10 @@ export class EditionsComponent {
     rents[level] = value;
     list[index] = { ...list[index], rents: rents as [number, number, number, number, number, number] };
     this.properties.set(list);
+  }
+
+  protected toggleProperty(id: string): void {
+    this.expandedProperty.set(this.expandedProperty() === id ? undefined : id);
   }
 
   protected async save(): Promise<void> {
@@ -144,9 +157,18 @@ export class EditionsComponent {
     }
   }
 
-  protected async deleteEdition(id: string): Promise<void> {
-    if (!confirm('¿Eliminar esta edición?')) return;
-    await this.editionService.delete(id);
+  protected promptDelete(id: string): void {
+    this.deleteTargetId.set(id);
+    this.showDeleteConfirm.set(true);
+  }
+
+  protected async onDeleteConfirmed(confirmed: boolean): Promise<void> {
+    const id = this.deleteTargetId();
+    this.showDeleteConfirm.set(false);
+    if (confirmed && id) {
+      await this.editionService.delete(id);
+    }
+    this.deleteTargetId.set(undefined);
   }
 
   protected format(amount: number): string {

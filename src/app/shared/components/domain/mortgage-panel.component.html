@@ -1,15 +1,17 @@
 <div class="space-y-4">
-  <p class="text-sm text-slate-600">Propietario: <strong>{{ me().name }}</strong></p>
+  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
+    Propietario: <span class="font-semibold text-text">{{ me().name }}</span>
+  </div>
 
   @if (selected()) {
-    <div class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-      Propiedad seleccionada:
-      <strong>{{ selected()?.name }}</strong>
-      ({{ mode() === 'mortgage' ? 'hipoteca' : 'deshipoteca' }})
+    <div class="rounded-lg border border-warning/30 bg-warning-muted p-3 text-sm">
+      <span class="text-text-secondary">Propiedad seleccionada:</span>
+      <span class="ml-1 font-semibold text-text">{{ selected()?.name }}</span>
+      <span class="ml-2 text-text-secondary">({{ mode() === 'mortgage' ? 'hipoteca' : 'deshipoteca' }})</span>
     </div>
   }
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
     @for (property of candidateProperties(); track property.id) {
       <app-property-card
         [property]="property"
@@ -20,7 +22,7 @@
         (propertyClick)="onSelect(property)"
       />
     } @empty {
-      <p class="col-span-full text-center text-sm text-slate-500">No hay propiedades candidatas para esta acción.</p>
+      <p class="col-span-full text-center text-sm text-text-secondary">No hay propiedades candidatas para esta acción.</p>
     }
   </div>
 

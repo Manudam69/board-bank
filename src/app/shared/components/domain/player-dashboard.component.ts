@@ -3,11 +3,12 @@ import type { CurrencyConfig, Edition, Player } from '../../../core/models';
 import { MoneyDisplayComponent } from './money-display.component';
 import { PropertyCardComponent } from './property-card.component';
 import { ButtonComponent } from '../ui/button.component';
+import { EmptyStateComponent } from '../ui/empty-state.component';
 
 @Component({
   selector: 'app-player-dashboard',
   standalone: true,
-  imports: [MoneyDisplayComponent, PropertyCardComponent, ButtonComponent],
+  imports: [MoneyDisplayComponent, PropertyCardComponent, ButtonComponent, EmptyStateComponent],
   templateUrl: './player-dashboard.component.html',
 })
 export class PlayerDashboardComponent {

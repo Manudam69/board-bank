@@ -1,33 +1,36 @@
 <button
   type="button"
-  class="w-full rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-  [class.border-blue-500]="selected()"
-  [class.ring-2]="selected()"
-  [class.ring-blue-500]="selected()"
-  [class.border-slate-200]="!selected()"
+  class="group w-full rounded-xl border p-4 text-left transition hover:bg-surface-hover focus:outline-none"
+  [class.border-accent]="selected()"
+  [class.ring-1]="selected()"
+  [class.ring-accent]="selected()"
+  [class.bg-surface]="selected()"
+  [class.border-border]="!selected()"
+  [class.bg-surface-elevated]="!selected()"
   [class.opacity-60]="player().bankrupt"
+  [class.cursor-not-allowed]="player().bankrupt"
   (click)="onClick()"
 >
   <div class="flex items-center gap-3">
-    <span class="h-10 w-10 shrink-0 rounded-full {{ player().avatarColor }}"></span>
+    <span class="h-10 w-10 shrink-0 rounded-full {{ player().avatarColor }} ring-2 ring-bg"></span>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
-        <h3 class="truncate text-lg font-semibold text-slate-900">{{ player().name }}</h3>
+        <h3 class="truncate text-lg font-semibold text-text">{{ player().name }}</h3>
         @if (player().host) {
-          <span class="rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-700">Host</span>
+          <span class="rounded bg-surface-hover px-1.5 py-0.5 text-xs font-medium text-text-secondary">Host</span>
         }
         @if (player().bankrupt) {
-          <span class="rounded bg-rose-100 px-1.5 py-0.5 text-xs font-medium text-rose-700">Quiebra</span>
+          <span class="rounded bg-danger-muted px-1.5 py-0.5 text-xs font-medium text-negative">Quiebra</span>
         }
       </div>
       <div class="mt-1 flex items-baseline justify-between">
         <app-money-display [amount]="player().cash" [currency]="currency()" size="lg" />
-        <span class="text-xs text-slate-500">
-          {{ propertyCount() }} propiedad(es)
+        <span class="text-xs text-text-muted">
+          {{ propertyCount() }} prop.
         </span>
       </div>
       @if (isHostView()) {
-        <p class="mt-1 text-xs text-slate-500">Valor neto: {{ formattedNetWorth() }}</p>
+        <p class="mt-1 text-xs text-text-muted">Valor neto: <span class="text-text-secondary">{{ formattedNetWorth() }}</span></p>
       }
     </div>
   </div>

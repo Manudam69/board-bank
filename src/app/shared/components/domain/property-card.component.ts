@@ -1,5 +1,4 @@
 import { Component, computed, input, output } from '@angular/core';
-import { NgClass } from '@angular/common';
 import type { Edition, PlayerProperty, PropertyMetadata } from '../../../core/models';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { MoneyDisplayComponent } from './money-display.component';
@@ -26,12 +25,13 @@ export class PropertyCardComponent {
   protected currency = computed(() => this.edition().currency);
   protected isOwned = computed(() => !!this.owned());
   protected isMortgaged = computed(() => this.owned()?.mortgaged ?? false);
-  protected buildingText = computed(() => {
+
+  protected buildingSummary = computed(() => {
     const o = this.owned();
-    if (!o) return '';
-    if (o.hasHotel) return '🏨 Hotel';
-    if (o.houses > 0) return `🏠 ${o.houses} casa(s)`;
-    return '';
+    if (!o) return null;
+    if (o.hasHotel) return { type: 'hotel', label: 'Hotel' };
+    if (o.houses > 0) return { type: 'houses', label: `${o.houses} casa${o.houses > 1 ? 's' : ''}` };
+    return null;
   });
 
   protected rentPreview = computed(() => {
@@ -39,6 +39,11 @@ export class PropertyCardComponent {
     if (!o) return this.property().rents[0];
     if (o.hasHotel) return this.property().rents[5];
     return this.property().rents[o.houses];
+  });
+
+  protected needsBorder = computed(() => {
+    const color = this.property().groupColor.toUpperCase();
+    return color === '#FFFFFF' || color === '#FFFF00' || color === '#000000';
   });
 
   protected onClick(): void {

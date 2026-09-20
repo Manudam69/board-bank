@@ -51,6 +51,30 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Use the async pipe to handle observables
 - Do not assume globals like (`new Date()`) are available.
 
+## Project Notes
+
+### Build / Test / Serve
+- Removed SSR; the app is browser-only because Firebase is used for real-time sync.
+- Run: `npm start`
+- Build (dev): `npx ng build --configuration development`
+- Build (prod): `npx ng build --configuration production`
+- Tests: `npx ng test --watch=false`
+
+### Firebase Setup
+1. Create a project at https://console.firebase.google.com.
+2. Enable **Firestore Database** and **Authentication** (sign-in method: Anonymous).
+3. Replace the placeholder values in `src/environments/firebase.ts` with your project's config.
+4. Copy the contents of `firestore.rules` (in the project root) into Firebase Console → Firestore Database → Rules, then click **Publish**. The rules require an authenticated user to read/write rooms and custom editions. Full per-player server validation would require restructuring the room into per-player subdocuments; the "only self-service" behavior is enforced by client-side guards.
+5. If you see "Missing or insufficient permissions", it means the rules have not been published or Anonymous Auth is disabled.
+
+### Architecture
+- Domain models: `src/app/core/models/`
+- Business + Firebase services: `src/app/core/services/`
+- Editions data: `src/app/core/constants/editions.ts`
+- Shared UI components: `src/app/shared/components/ui/`
+- Shared domain components: `src/app/shared/components/domain/`
+- Feature pages (lazy loaded): `src/app/features/`
+
 ## Services
 
 - Design services around a single responsibility

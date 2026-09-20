@@ -1,0 +1,71 @@
+<div class="space-y-6">
+  <p class="text-sm text-slate-600">Ofertante: <strong>{{ me().name }}</strong></p>
+
+  <div class="space-y-1">
+    <label class="block text-sm font-medium text-slate-700" for="to">Receptor del intercambio</label>
+    <select
+      id="to"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      [(ngModel)]="toId"
+    >
+      <option [ngValue]="undefined" disabled selected>Selecciona jugador</option>
+      @for (p of eligibleTo(); track p.id) {
+        <option [ngValue]="p.id">{{ p.name }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="rounded-xl border border-slate-200 p-4">
+      <h4 class="mb-3 text-sm font-semibold text-slate-700">Tú das</h4>
+      <app-amount-input [(amount)]="fromCash" [currency]="currency()" label="Dinero" [max]="me().cash" />
+      <div class="mt-3">
+        <p class="mb-2 text-sm font-medium text-slate-700">Propiedades</p>
+        <div class="grid grid-cols-1 gap-2">
+          @for (property of myPropertiesList(); track property.id) {
+            <button
+              type="button"
+              class="rounded-lg border px-3 py-2 text-left text-sm"
+              [class.border-blue-500]="fromProperties().has(property.id)"
+              [class.bg-blue-50]="fromProperties().has(property.id)"
+              [class.border-slate-200]="!fromProperties().has(property.id)"
+              (click)="toggleFrom(property.id)"
+            >
+              {{ property.name }}
+            </button>
+          } @empty {
+            <p class="text-sm text-slate-500">No tienes propiedades disponibles.</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 p-4">
+      <h4 class="mb-3 text-sm font-semibold text-slate-700">Recibes</h4>
+      <app-amount-input [(amount)]="toCash" [currency]="currency()" label="Dinero" />
+      <div class="mt-3">
+        <p class="mb-2 text-sm font-medium text-slate-700">Propiedades</p>
+        <div class="grid grid-cols-1 gap-2">
+          @for (property of toPropertiesList(); track property.id) {
+            <button
+              type="button"
+              class="rounded-lg border px-3 py-2 text-left text-sm"
+              [class.border-blue-500]="toProperties().has(property.id)"
+              [class.bg-blue-50]="toProperties().has(property.id)"
+              [class.border-slate-200]="!toProperties().has(property.id)"
+              (click)="toggleTo(property.id)"
+            >
+              {{ property.name }}
+            </button>
+          } @empty {
+            <p class="text-sm text-slate-500">El receptor no tiene propiedades disponibles.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
+    Proponer intercambio
+  </app-button>
+</div>

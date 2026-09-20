@@ -1,0 +1,106 @@
+<div class="mx-auto max-w-4xl px-4 py-10">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl font-extrabold text-slate-900">Board Bank</h1>
+    <p class="mt-2 text-lg text-slate-600">Banquero personal de Monopoly: cada jugador maneja solo su dinero y sus propiedades.</p>
+  </header>
+
+  @if (authError()) {
+    <div class="mb-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-800" role="alert">
+      <p class="font-medium">{{ authError() }}</p>
+      <p class="mt-1">Ve a Firebase Console → Authentication → Sign-in method → habilita Anonymous.</p>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  @if (!authReady()) {
+    <div class="flex justify-center py-12">
+      <app-spinner label="Conectando con Firebase..." />
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-semibold text-slate-900">Unirse a una sala</h2>
+        <div class="space-y-3">
+          <input
+            type="text"
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-center uppercase tracking-widest text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="CÓDIGO"
+            maxlength="6"
+            [(ngModel)]="joinCode"
+          />
+          <input
+            type="text"
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Tu nombre"
+            [(ngModel)]="joinName"
+          />
+          <app-button [fullWidth]="true" [loading]="processing()" [disabled]="!joinCode().trim() || !joinName().trim()" (clickAction)="joinRoom()">
+            Unirse
+          </app-button>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-semibold text-slate-900">Crear sala</h2>
+        <div class="space-y-3">
+          <input
+            type="text"
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Tu nombre"
+            [(ngModel)]="createName"
+          />
+          <app-button [fullWidth]="true" variant="secondary" (clickAction)="openCreate()">
+            Elegir edición y crear
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold text-slate-900">Ediciones</h2>
+      <a routerLink="/editions" class="text-sm font-medium text-blue-600 hover:underline">Gestionar ediciones</a>
+    </div>
+    <p class="mt-1 text-sm text-slate-500">Cada edición define moneda, escala de precios y propiedades. Puedes usar las predefinidas o crear la tuya.</p>
+  </div>
+</div>
+
+<app-modal [open]="showCreateModal()" title="Crear sala" (closeAction)="showCreateModal.set(false)">
+  <div class="space-y-4">
+    @if (loadingEditions()) {
+      <div class="flex items-center justify-center py-4">
+        <app-spinner label="Cargando ediciones..." />
+      </div>
+    } @else {
+      <div class="space-y-1">
+        <label class="block text-sm font-medium text-slate-700">Edición de Monopoly</label>
+        <select
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          [(ngModel)]="selectedEditionId"
+        >
+          @for (edition of editions(); track edition.id) {
+            <option [ngValue]="edition.id">{{ edition.name }} — Dinero inicial: {{ edition.startingMoney | money: edition.currency }}</option>
+          }
+        </select>
+      </div>
+
+      @if (selectedEdition(); as edition) {
+        <div class="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+          <p><strong>{{ edition.name }}</strong></p>
+          <p>Sueldo por salida: {{ edition.goSalary | money: edition.currency }}</p>
+          <p>Propiedades: {{ edition.properties.length }}</p>
+        </div>
+      }
+
+      <app-button [fullWidth]="true" [loading]="processing()" [disabled]="!selectedEditionId() || !createName().trim()" (clickAction)="createRoom()">
+        Crear sala
+      </app-button>
+    }
+  </div>
+</app-modal>

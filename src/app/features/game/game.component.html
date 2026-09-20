@@ -1,0 +1,210 @@
+<div class="min-h-screen bg-slate-50">
+  @if (loading() || !authReady()) {
+    <div class="flex justify-center py-12">
+      <app-spinner label="Cargando partida..." />
+    </div>
+  } @else if (error()) {
+    <div class="mx-auto max-w-xl rounded-lg bg-red-50 p-6 text-center text-red-700" role="alert">
+      <p>{{ error() }}</p>
+      <app-button class="mt-4" (clickAction)="router.navigate(['/'])">Volver al inicio</app-button>
+    </div>
+  } @else if (room() && edition() && !isInRoom()) {
+    <div class="mx-auto max-w-md px-4 py-10">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
+        <h1 class="text-2xl font-bold text-slate-900">Sala {{ room()!.id }}</h1>
+        <p class="mt-2 text-slate-600">No eres parte de esta sala todavía.</p>
+        <input
+          type="text"
+          class="mt-4 w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="Tu nombre"
+          [(ngModel)]="joinName"
+        />
+        <app-button class="mt-3" [fullWidth]="true" [loading]="joining()" [disabled]="!joinName().trim()" (clickAction)="joinGame()">
+          Unirse a la partida
+        </app-button>
+        <app-button class="mt-2" variant="ghost" [fullWidth]="true" (clickAction)="router.navigate(['/'])">
+          Volver al inicio
+        </app-button>
+      </div>
+    </div>
+  } @else if (room() && edition() && currentPlayer()) {
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-lg font-bold text-slate-900">Sala {{ room()!.id }}</h1>
+          <p class="text-xs text-slate-500">{{ edition()!.name }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <p class="text-xs text-slate-500">{{ currentPlayer()!.name }}</p>
+            <app-money-display [amount]="currentPlayer()!.cash" [currency]="edition()!.currency" size="sm" />
+          </div>
+          <app-button variant="ghost" size="sm" (clickAction)="leave()">Salir</app-button>
+          @if (isHost()) {
+            <app-button variant="danger" size="sm" (clickAction)="finishGame()">Finalizar</app-button>
+          }
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6">
+      @if (toast()) {
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ toast() }}</div>
+      }
+
+      <app-bank-actions-bar (action)="openAction($event)" />
+
+      <div class="mt-6">
+        <app-tabs [tabs]="[
+          { id: 'me', label: 'Yo' },
+          { id: 'players', label: 'Jugadores' },
+          { id: 'properties', label: 'Propiedades' },
+          { id: 'trades', label: 'Intercambios' },
+          { id: 'log', label: 'Historial' }
+        ]" [(activeTab)]="activeTab" />
+      </div>
+
+      <div class="mt-4">
+        @switch (activeTab()) {
+          @case ('me') {
+            <app-player-dashboard
+              [me]="currentPlayer()!"
+              [edition]="edition()!"
+              [currency]="edition()!.currency"
+              (salaryAction)="onBankSalary()"
+              (taxAction)="onBankTax($event)"
+              (bankruptcyAction)="onDeclareBankruptcy()"
+            />
+          }
+
+          @case ('players') {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (player of room()!.players; track player.id) {
+                <app-player-card
+                  [player]="player"
+                  [currency]="edition()!.currency"
+                  [edition]="edition()!"
+                  [isHostView]="true"
+                />
+              }
+            </div>
+          }
+
+          @case ('properties') {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (property of edition()!.properties; track property.id) {
+                @let owner = room()!.players.find(p => p.properties.some(pp => pp.propertyId === property.id));
+                @let owned = owner?.properties.find(pp => pp.propertyId === property.id);
+                <app-property-card
+                  [property]="property"
+                  [edition]="edition()!"
+                  [owned]="owned ?? null"
+                  [ownerName]="owner?.name ?? ''"
+                />
+              }
+            </div>
+          }
+
+          @case ('trades') {
+            <app-trade-list
+              [roomId]="room()!.id"
+              [trades]="room()!.trades"
+              [players]="room()!.players"
+              [currency]="edition()!.currency"
+              [edition]="edition()!"
+              [currentPlayerId]="currentPlayer()?.id"
+              (acceptAction)="acceptTrade($event)"
+              (rejectAction)="rejectTrade($event)"
+            />
+          }
+
+          @case ('log') {
+            <app-log-feed [room]="room()!" [currency]="edition()!.currency" />
+          }
+        }
+      </div>
+    </main>
+  }
+</div>
+
+<app-modal [open]="activeAction() === 'transfer'" title="Transferir dinero" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-transfer-panel
+      [me]="currentPlayer()!"
+      [players]="room()!.players"
+      [currency]="edition()!.currency"
+      (transferAction)="onTransfer($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'buy'" title="Comprar propiedad" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-buy-property-panel
+      [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [players]="room()!.players"
+      [currency]="edition()!.currency"
+      (buyAction)="onBuy($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'rent'" title="Pagar alquiler" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-rent-panel
+      [room]="room()!"
+      [me]="currentPlayer()!"
+      [edition]="edition()!"
+      [currency]="edition()!.currency"
+      (rentAction)="onRent($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'mortgage'" title="Hipotecar propiedad" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-mortgage-panel
+      mode="mortgage"
+      [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [currency]="edition()!.currency"
+      (action)="onMortgage($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'unmortgage'" title="Deshipotecar propiedad" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-mortgage-panel
+      mode="unmortgage"
+      [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [currency]="edition()!.currency"
+      (action)="onUnmortgage($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'build'" title="Construir / vender edificios" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-build-panel
+      [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [currency]="edition()!.currency"
+      (buildAction)="onBuild($event)"
+    />
+  }
+</app-modal>
+
+<app-modal [open]="activeAction() === 'trade'" title="Proponer intercambio" (closeAction)="closeAction()">
+  @if (room() && edition() && currentPlayer()) {
+    <app-trade-builder
+      [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [players]="room()!.players"
+      [currency]="edition()!.currency"
+      (proposeAction)="onProposeTrade($event)"
+    />
+  }
+</app-modal>

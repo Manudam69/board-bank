@@ -1,0 +1,73 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { doc, onSnapshot, runTransaction, type Unsubscribe } from 'firebase/firestore';
+import { FirebaseInitService } from './firebase-init.service';
+import { cleanFirestoreData } from '../utils/clean-firestore-data';
+import type { Room } from '../models';
+
+@Injectable({ providedIn: 'root' })
+export class GameStateService {
+  private readonly firebase = inject(FirebaseInitService);
+  private readonly db = this.firebase.db;
+  private unsub?: Unsubscribe;
+
+  readonly room = signal<Room | null>(null);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly connected = signal(false);
+
+  subscribe(roomId: string): void {
+    this.unsub?.();
+    this.loading.set(true);
+    this.error.set(null);
+    this.connected.set(false);
+
+    const ref = doc(this.db, 'rooms', roomId);
+    this.unsub = onSnapshot(
+      ref,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          this.room.set(snapshot.data() as Room);
+        } else {
+          this.error.set('La sala ya no existe.');
+          this.room.set(null);
+        }
+        this.loading.set(false);
+        this.connected.set(true);
+      },
+      (err) => {
+        this.error.set(err.message ?? 'Error de conexión con la sala.');
+        this.loading.set(false);
+        this.connected.set(false);
+      },
+    );
+  }
+
+  unsubscribe(): void {
+    this.unsub?.();
+    this.unsub = undefined;
+    this.room.set(null);
+    this.connected.set(false);
+  }
+
+  async runInTransaction(
+    roomId: string,
+    mutator: (room: Room) => Room | null,
+  ): Promise<void> {
+    const ref = doc(this.db, 'rooms', roomId);
+    await runTransaction(this.db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) throw new Error('La sala no existe');
+
+      const current = snap.data() as Room;
+      const next = mutator(current);
+      if (!next) return;
+
+      const toSave = cleanFirestoreData({ ...next, updatedAt: Date.now() });
+      transaction.update(ref, toSave);
+    });
+  }
+
+  roomRef(roomId: string) {
+    return doc(this.db, 'rooms', roomId);
+  }
+}

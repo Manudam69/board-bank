@@ -1,0 +1,34 @@
+<div class="space-y-4">
+  <p class="text-sm text-slate-600">Origen: <strong>{{ me().name }}</strong> ({{ me().cash | money: currency() }})</p>
+
+  <div class="space-y-1">
+    <label class="block text-sm font-medium text-slate-700" for="to">Destino</label>
+    <select
+      id="to"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      [(ngModel)]="toId"
+    >
+      <option [ngValue]="undefined" disabled selected>Selecciona destino</option>
+      @for (p of eligibleTo(); track p.id) {
+        <option [ngValue]="p.id">{{ p.name }}</option>
+      }
+    </select>
+  </div>
+
+  <app-amount-input [(amount)]="amount" [currency]="currency()" label="Cantidad" [max]="me().cash" />
+
+  <div class="space-y-1">
+    <label class="block text-sm font-medium text-slate-700" for="reason">Motivo (opcional)</label>
+    <input
+      id="reason"
+      type="text"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      placeholder="Ej. alquiler, deuda, regalo..."
+      [(ngModel)]="reason"
+    />
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
+    Confirmar transferencia
+  </app-button>
+</div>

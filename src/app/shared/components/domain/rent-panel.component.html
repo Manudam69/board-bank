@@ -1,0 +1,48 @@
+<div class="space-y-4">
+  <p class="text-sm text-slate-600">Pagas: <strong>{{ me().name }}</strong> ({{ me().cash | money: currency() }})</p>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="space-y-1">
+      <label class="block text-sm font-medium text-slate-700" for="dice">Suma de dados (servicios)</label>
+      <input
+        id="dice"
+        type="number"
+        min="2"
+        max="12"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        [(ngModel)]="diceSum"
+      />
+    </div>
+  </div>
+
+  @if (rentInfo()) {
+    <div class="rounded-lg bg-blue-50 p-4">
+      <p class="text-sm text-blue-900">
+        Alquiler calculado:
+        <app-money-display [amount]="rentInfo()!.amount" [currency]="currency()" size="lg" />
+      </p>
+      <p class="text-xs text-blue-700">{{ rentInfo()!.reason }}</p>
+      @if (ownerName()) {
+        <p class="text-xs text-blue-700">Propietario: {{ ownerName() }}</p>
+      }
+    </div>
+  }
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    @for (property of candidateProperties(); track property.id) {
+      <app-property-card
+        [property]="property"
+        [edition]="edition()"
+        [selectable]="true"
+        [selected]="selected()?.id === property.id"
+        (propertyClick)="onSelect(property)"
+      />
+    } @empty {
+      <p class="col-span-full text-center text-sm text-slate-500">No hay propiedades con dueño distinto a ti.</p>
+    }
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canPay()" (clickAction)="submit()">
+    Pagar alquiler
+  </app-button>
+</div>

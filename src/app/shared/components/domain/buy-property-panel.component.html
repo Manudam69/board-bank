@@ -1,0 +1,37 @@
+<div class="space-y-4">
+  <p class="text-sm text-slate-600">Comprador: <strong>{{ me().name }}</strong> ({{ me().cash | money: currency() }})</p>
+
+  @if (selectedProperty()) {
+    <div class="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+      Propiedad seleccionada:
+      <strong>{{ selectedProperty()?.name }}</strong>
+      ({{ selectedProperty()!.price | money: currency() }})
+    </div>
+  }
+
+  <div class="max-h-96 space-y-4 overflow-y-auto pr-1">
+    @for (group of groupedProperties(); track group.group) {
+      <div>
+        <h4 class="mb-2 text-sm font-semibold text-slate-700">{{ group.group }}</h4>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          @for (property of group.properties; track property.id) {
+            <app-property-card
+              [property]="property"
+              [edition]="edition()"
+              [selectable]="true"
+              [selected]="selectedProperty()?.id === property.id"
+              [disabled]="me().cash < property.price"
+              (propertyClick)="onSelect(property)"
+            />
+          }
+        </div>
+      </div>
+    } @empty {
+      <p class="text-center text-sm text-slate-500">Todas las propiedades ya tienen dueño.</p>
+    }
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canBuy()" (clickAction)="submit()">
+    Comprar propiedad
+  </app-button>
+</div>

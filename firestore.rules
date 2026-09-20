@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Salas de juego. Cualquier usuario autenticado puede leer/escribir.
+    // La lógica de "solo yo toco mis datos" vive en los guards del cliente;
+    // restringir por jugador en un único documento requeriría reestructurar
+    // la sala a subdocumentos por jugador.
+    match /rooms/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Ediciones de Monopoly (custom). Lectura pública para todos los autenticados.
+    match /editions/{editionId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+  }
+}

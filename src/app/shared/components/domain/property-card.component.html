@@ -1,0 +1,57 @@
+<button
+  type="button"
+  class="relative flex w-full flex-col overflow-hidden rounded-xl border text-left shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  [class.border-blue-500]="selected()"
+  [class.ring-2]="selected()"
+  [class.ring-blue-500]="selected()"
+  [class.border-slate-200]="!selected()"
+  [class.opacity-70]="disabled()"
+  [disabled]="disabled()"
+  (click)="onClick()"
+  [attr.aria-label]="property().name"
+>
+  <div class="h-3 w-full" [style.background-color]="property().groupColor"></div>
+
+  <div class="flex flex-1 flex-col p-3">
+    <div class="flex items-start justify-between">
+      <div class="min-w-0">
+        <p class="truncate text-sm font-medium text-slate-500">{{ property().group }}</p>
+        <h4 class="truncate text-base font-semibold text-slate-900">{{ property().name }}</h4>
+      </div>
+      @if (isOwned()) {
+        <span class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+          {{ ownerName() || 'Tuyo' }}
+        </span>
+      }
+    </div>
+
+    <div class="mt-2 flex items-center justify-between">
+      <app-money-display [amount]="property().price" [currency]="currency()" size="sm" />
+      <span class="text-xs text-slate-500">Hip: {{ property().mortgageValue | money: currency() }}</span>
+    </div>
+
+    @if (isOwned()) {
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        @if (isMortgaged()) {
+          <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Hipotecada</span>
+        }
+        @if (buildingText()) {
+          <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">{{ buildingText() }}</span>
+        }
+      </div>
+      <div class="mt-1 text-xs text-slate-600">
+        Alquiler actual: {{ rentPreview() | money: currency() }}
+      </div>
+    }
+
+    @if (showActions() && actionLabel()) {
+      <button
+        type="button"
+        class="mt-3 w-full rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        (click)="onAction($event)"
+      >
+        {{ actionLabel() }}
+      </button>
+    }
+  </div>
+</button>

@@ -1,0 +1,9 @@
+<div class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+  <app-button size="sm" (clickAction)="action.emit('transfer')">Transferir</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('buy')">Comprar</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('rent')">Alquiler</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('mortgage')">Hipotecar</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('unmortgage')">Deshipotecar</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('build')">Construir</app-button>
+  <app-button size="sm" variant="secondary" (clickAction)="action.emit('trade')">Intercambiar</app-button>
+</div>

@@ -1,0 +1,30 @@
+<div class="space-y-4">
+  <p class="text-sm text-slate-600">Propietario: <strong>{{ me().name }}</strong></p>
+
+  @if (selected()) {
+    <div class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+      Propiedad seleccionada:
+      <strong>{{ selected()?.name }}</strong>
+      ({{ mode() === 'mortgage' ? 'hipoteca' : 'deshipoteca' }})
+    </div>
+  }
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    @for (property of candidateProperties(); track property.id) {
+      <app-property-card
+        [property]="property"
+        [edition]="edition()"
+        [owned]="me().properties.find(pp => pp.propertyId === property.id) ?? null"
+        [selectable]="true"
+        [selected]="selected()?.id === property.id"
+        (propertyClick)="onSelect(property)"
+      />
+    } @empty {
+      <p class="col-span-full text-center text-sm text-slate-500">No hay propiedades candidatas para esta acción.</p>
+    }
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
+    {{ mode() === 'mortgage' ? 'Hipotecar' : 'Deshipotecar' }}
+  </app-button>
+</div>

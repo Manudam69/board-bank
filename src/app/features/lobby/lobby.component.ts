@@ -66,7 +66,8 @@ export class LobbyComponent {
   readonly inviteUrl = computed(() => {
     const id = this.room()?.id;
     if (!id) return '';
-    return `${location.origin}/join/${id}`;
+    const base = document.baseURI.replace(/\/$/, '');
+    return `${base}/join/${id}`;
   });
 
   readonly canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';

@@ -1,5 +1,5 @@
 import { RentService } from './rent.service';
-import { CLASSIC_SPAIN } from '../constants/editions';
+import { CLASSIC_SPAIN, MILLIONAIRE } from '../constants/editions';
 import type { Player, Room } from '../models';
 
 function makeRoom(players: Player[]): Room {
@@ -78,6 +78,39 @@ describe('RentService', () => {
     };
     const room = makeRoom([owner]);
     expect(service.calculate(room, CLASSIC_SPAIN, 'p27', 8).amount).toBe(80);
+  });
+
+  it('returns millions-scale utility rent based on edition rents', () => {
+    const owner: Player = {
+      id: '1',
+      name: 'Ana',
+      avatarColor: 'bg-red-500',
+      cash: 0,
+      bankrupt: false,
+      host: true,
+      joinedAt: 0,
+      properties: [{ propertyId: 'm27', houses: 0, hasHotel: false, mortgaged: false }],
+    };
+    const room = makeRoom([owner]);
+    expect(service.calculate(room, MILLIONAIRE, 'm27', 8).amount).toBe(320_000);
+  });
+
+  it('doubles millions-scale utility rent when both utilities are owned', () => {
+    const owner: Player = {
+      id: '1',
+      name: 'Ana',
+      avatarColor: 'bg-red-500',
+      cash: 0,
+      bankrupt: false,
+      host: true,
+      joinedAt: 0,
+      properties: [
+        { propertyId: 'm27', houses: 0, hasHotel: false, mortgaged: false },
+        { propertyId: 'm28', houses: 0, hasHotel: false, mortgaged: false },
+      ],
+    };
+    const room = makeRoom([owner]);
+    expect(service.calculate(room, MILLIONAIRE, 'm27', 8).amount).toBe(800_000);
   });
 
   it('returns hotel rent', () => {

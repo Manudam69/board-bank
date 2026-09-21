@@ -28,10 +28,10 @@ export class RentService {
 
     if (meta.isUtility) {
       const utilities = this.countGroupOwned(owner, edition, 'Servicio');
-      const multiplier = utilities === 2 ? 10 : 4;
+      const perDie = meta.rents[Math.min(utilities, 2) - 1] ?? meta.rents[0] ?? 0;
       const safeDice = diceSum ?? 7;
       return {
-        amount: safeDice * multiplier,
+        amount: safeDice * perDie,
         reason: `${utilities} servicio(s) poseído(s) × dados ${safeDice}`,
       };
     }

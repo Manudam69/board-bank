@@ -343,20 +343,18 @@ export class GameComponent {
     );
   }
 
-  protected onRent(data: { propertyId: string; amount: number }): void {
+  protected onRent(data: { toId: string; propertyId: string; amount: number }): void {
     const roomId = this.roomId();
     const room = this.room();
     const me = this.requireCurrentPlayer();
-    const owner = room?.players.find((player) =>
-      player.properties.some((pp) => pp.propertyId === data.propertyId),
-    );
+    const owner = room?.players.find((p) => p.id === data.toId);
     const propertyName =
       this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !owner) return;
     this.runOp(
       () => this.bank.transfer(roomId, me, owner.id, data.amount, `Alquiler de ${propertyName}`),
       {
-        message: 'Alquiler pagado',
+        message: 'Renta pagada',
         detail: `${this.format(data.amount)} a ${owner.name}`,
         sound: 'cashOut',
       },

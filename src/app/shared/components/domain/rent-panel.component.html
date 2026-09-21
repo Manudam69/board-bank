@@ -1,51 +1,146 @@
-<div class="space-y-4">
-  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
-    Pagas: <span class="font-semibold text-text">{{ me().name }}</span>
-    <span class="ml-2 text-text-secondary">{{ me().cash | money: currency() }}</span>
+<div class="space-y-5">
+  <div class="flex items-center gap-3">
+    <div class="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-3">
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+          [style.background-color]="me().avatarColor"
+        >
+          {{ me().name.charAt(0).toUpperCase() }}
+        </span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-text">{{ me().name }}</p>
+          <p class="text-xs text-text-secondary">Pagas</p>
+        </div>
+      </div>
+    </div>
+
+    <svg
+      class="h-5 w-5 shrink-0 text-text-muted"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['arrow-right']" />
+    </svg>
+
+    <div class="flex-1 rounded-xl border border-dashed border-border bg-surface-elevated/30 p-3">
+      <p class="text-xs font-medium text-text-secondary">Cobrador</p>
+      <p class="truncate text-sm font-semibold text-text">
+        @if (selectedToId(); as toId) {
+          {{ receivers().find((r) => r.id === toId)?.name ?? 'Jugador' }}
+        } @else {
+          <span class="text-text-muted">Selecciona jugador</span>
+        }
+      </p>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div class="space-y-2">
+    <p class="text-sm font-medium text-text-secondary">¿A quién le pagas?</p>
+    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Cobrador del alquiler">
+      @for (receiver of receivers(); track receiver.id) {
+        <button
+          type="button"
+          role="radio"
+          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
+          [class.border-accent]="selectedToId() === receiver.id"
+          [class.bg-accent-muted]="selectedToId() === receiver.id"
+          [class.text-text]="selectedToId() === receiver.id"
+          [class.border-border]="selectedToId() !== receiver.id"
+          [class.bg-surface-elevated]="selectedToId() !== receiver.id"
+          [class.text-text-secondary]="selectedToId() !== receiver.id"
+          [class.hover:bg-surface-hover]="selectedToId() !== receiver.id"
+          [attr.aria-checked]="selectedToId() === receiver.id"
+          (click)="selectTo(receiver.id)"
+        >
+          <span
+            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+            [style.background-color]="receiver.avatarColor"
+          >
+            {{ receiver.name.charAt(0).toUpperCase() }}
+          </span>
+          <span class="max-w-[8rem] truncate">{{ receiver.name }}</span>
+        </button>
+      } @empty {
+        <p class="text-sm text-text-secondary">No hay jugadores con propiedades disponibles.</p>
+      }
+    </div>
+  </div>
+
+  @if (selectedToId()) {
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium text-text-secondary">Propiedad</p>
+        <span class="text-xs text-text-muted">{{ receiverProperties().length }} disponibles</span>
+      </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        @for (property of receiverProperties(); track property.id) {
+          <app-property-card
+            [property]="property"
+            [edition]="edition()"
+            [selectable]="true"
+            [selected]="selectedProperty()?.id === property.id"
+            (propertyClick)="onSelectProperty(property)"
+          />
+        } @empty {
+          <p class="col-span-full text-sm text-text-secondary">
+            Este jugador no tiene propiedades libres de hipoteca.
+          </p>
+        }
+      </div>
+    </div>
+  }
+
+  @if (needsDice()) {
     <div class="space-y-1">
-      <label class="block text-sm font-medium text-text-secondary" for="dice">Suma de dados (servicios)</label>
+      <label class="block text-sm font-medium text-text-secondary" for="dice">Suma de dados</label>
       <input
         id="dice"
         type="number"
         min="2"
         max="12"
         class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
-        [(ngModel)]="diceSum"
+        [value]="diceSum() ?? ''"
+        (input)="onDiceInput($any($event).target.valueAsNumber)"
       />
+      <p class="text-xs text-text-muted">Servicios: se multiplica por el resultado de los dados.</p>
     </div>
-  </div>
+  }
 
-  @if (rentInfo()) {
-    <div class="rounded-lg border border-accent/30 bg-accent-muted p-4">
+  @if (rentInfo(); as info) {
+    <div
+      class="rounded-xl border p-4"
+      [class.border-positive/30]="canPay()"
+      [class.bg-positive-muted/30]="canPay()"
+      [class.border-negative/30]="!canPay()"
+      [class.bg-danger-muted/30]="!canPay()"
+    >
       <div class="flex items-center justify-between">
         <p class="text-sm text-text-secondary">Alquiler calculado</p>
-        <app-money-display [amount]="rentInfo()!.amount" [currency]="currency()" size="lg" />
+        <app-money-display [amount]="info.amount" [currency]="currency()" size="lg" />
       </div>
-      <p class="mt-1 text-xs text-text-muted">{{ rentInfo()!.reason }}</p>
-      @if (ownerName()) {
-        <p class="text-xs text-text-muted">Propietario: <span class="text-text-secondary">{{ ownerName() }}</span></p>
+      <p class="mt-1 text-xs text-text-muted">{{ info.reason }}</p>
+      @if (selectedOwnerName()) {
+        <p class="text-xs text-text-muted">
+          Propietario: <span class="text-text-secondary">{{ selectedOwnerName() }}</span>
+        </p>
+      }
+      @if (!canPay() && info.amount > 0) {
+        <p class="mt-2 text-xs font-medium text-negative">
+          Fondos insuficientes (tienes {{ me().cash | money: currency() }})
+        </p>
       }
     </div>
   }
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-    @for (property of candidateProperties(); track property.id) {
-      <app-property-card
-        [property]="property"
-        [edition]="edition()"
-        [selectable]="true"
-        [selected]="selected()?.id === property.id"
-        (propertyClick)="onSelect(property)"
-      />
-    } @empty {
-      <p class="col-span-full text-center text-sm text-text-secondary">No hay propiedades con dueño distinto a ti.</p>
+  <app-button [fullWidth]="true" [disabled]="!canPay() || !isValidDice()" (clickAction)="submit()">
+    @if (rentInfo(); as info) {
+      Pagar {{ info.amount | money: currency() }}
+    } @else {
+      Pagar alquiler
     }
-  </div>
-
-  <app-button [fullWidth]="true" [disabled]="!canPay()" (clickAction)="submit()">
-    Pagar alquiler
   </app-button>
 </div>

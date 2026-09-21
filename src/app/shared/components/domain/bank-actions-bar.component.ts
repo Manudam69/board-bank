@@ -11,9 +11,9 @@ interface ActionItem {
 }
 
 const ACTIONS: ActionItem[] = [
-  { id: 'transfer', label: 'Transferir', icon: ICONS['send'], primary: true },
+  { id: 'rent', label: 'Pagar renta', icon: ICONS['banknote'], primary: true },
+  { id: 'transfer', label: 'Transferir', icon: ICONS['send'] },
   { id: 'buy', label: 'Comprar', icon: ICONS['shopping-cart'] },
-  { id: 'rent', label: 'Alquiler', icon: ICONS['banknote'] },
   { id: 'build', label: 'Construir', icon: ICONS['hammer'] },
   { id: 'mortgage', label: 'Hipotecar', icon: ICONS['lock'] },
   { id: 'unmortgage', label: 'Deshipotecar', icon: ICONS['lock-open'] },
@@ -22,7 +22,6 @@ const ACTIONS: ActionItem[] = [
 
 @Component({
   selector: 'app-bank-actions-bar',
-  standalone: true,
   templateUrl: './bank-actions-bar.component.html',
 })
 export class BankActionsBarComponent {

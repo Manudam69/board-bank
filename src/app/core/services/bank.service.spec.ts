@@ -100,14 +100,66 @@ describe('BankService guards', () => {
   });
 
   it('includes metadata in bankruptcy log entry', async () => {
-    let savedLog: unknown | undefined;
+    let savedRoom: Room | undefined;
     runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
       const room = makeRoom();
       const next = mutator(room);
       if (next) Object.assign(room, next);
-      savedLog = room.log.at(-1);
+      savedRoom = room;
     });
     await service.declareBankruptcy('ROOM', 'u1');
-    expect(savedLog).toMatchObject({ metadata: { bankAction: 'bankruptcy' }, type: 'bankruptcy' });
+    const bankruptcyLog = savedRoom?.log.find((entry) => entry.type === 'bankruptcy');
+    expect(bankruptcyLog).toMatchObject({ metadata: { bankAction: 'bankruptcy' }, type: 'bankruptcy' });
+  });
+
+  it('finishes the game when bankruptcy leaves only one player standing', async () => {
+    let savedRoom: Room | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room = makeRoom();
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedRoom = room;
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    expect(savedRoom?.status).toBe('finished');
+    expect(savedRoom?.finishedAt).toBeGreaterThan(0);
+    const lastLog = savedRoom?.log.at(-1);
+    expect(lastLog?.type).toBe('game-end');
+    expect(lastLog?.description).toContain('Ben gana la partida');
+    expect(lastLog?.toPlayerId).toBe('u2');
+  });
+
+  it('does not finish the game when more than one player remains standing', async () => {
+    let savedRoom: Room | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room: Room = {
+        ...makeRoom(),
+        players: [
+          { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+          { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1200, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+        ],
+      };
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedRoom = room;
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    expect(savedRoom?.status).toBe('playing');
+    expect(savedRoom?.finishedAt).toBeUndefined();
+    expect(savedRoom?.log.some((entry) => entry.type === 'game-end')).toBe(false);
+  });
+
+  it('does not auto-finish a game already finished or in lobby', async () => {
+    let savedRoom: Room | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room = { ...makeRoom(), status: 'lobby' as const };
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedRoom = room;
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    expect(savedRoom?.status).toBe('lobby');
+    expect(savedRoom?.finishedAt).toBeUndefined();
   });
 });

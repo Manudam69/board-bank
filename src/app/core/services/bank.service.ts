@@ -117,7 +117,7 @@ export class BankService {
       const players = room.players.map((p) =>
         p.id === playerId ? { ...p, cash: 0, bankrupt: true } : p,
       );
-      const log = this.buildLog(
+      const bankruptcyLog = this.buildLog(
         'bankruptcy',
         0,
         `${player.name} se ha declarado en quiebra`,
@@ -126,7 +126,32 @@ export class BankService {
         player.properties.map((pp) => pp.propertyId),
         { bankAction: 'bankruptcy' },
       );
-      return { ...room, players, log: [...room.log, log] };
+
+      const activePlayers = players.filter((p) => !p.bankrupt);
+      const shouldFinish = room.status === 'playing' && activePlayers.length === 1;
+      const winner = shouldFinish ? activePlayers[0] : undefined;
+
+      if (!shouldFinish) {
+        return { ...room, players, log: [...room.log, bankruptcyLog] };
+      }
+
+      const finishLog = this.buildLog(
+        'game-end',
+        0,
+        winner ? `${winner.name} gana la partida` : 'La partida ha terminado',
+        undefined,
+        winner?.id,
+        undefined,
+        { gameEndReason: 'last-standing' },
+      );
+
+      return {
+        ...room,
+        players,
+        status: 'finished',
+        finishedAt: Date.now(),
+        log: [...room.log, bankruptcyLog, finishLog],
+      };
     });
   }
 }

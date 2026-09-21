@@ -69,6 +69,7 @@ export class LogFeedComponent {
       'bank-fee': this.icons['banknote'],
       trade: this.icons['arrow-left-right'],
       bankruptcy: this.icons['alert-triangle'],
+      'game-end': this.icons['crown'],
       undo: this.icons['rotate-ccw'],
     };
     return map[type];
@@ -88,6 +89,7 @@ export class LogFeedComponent {
       'bank-fee': 'Banco',
       trade: 'Intercambio',
       bankruptcy: 'Quiebra',
+      'game-end': 'Fin de partida',
       undo: 'Deshacer',
     };
     return labels[type];

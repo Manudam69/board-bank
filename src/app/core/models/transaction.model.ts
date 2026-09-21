@@ -11,6 +11,7 @@ export type TransactionType =
   | 'bank-fee'
   | 'trade'
   | 'bankruptcy'
+  | 'game-end'
   | 'undo';
 
 export interface TransactionLogEntry {

@@ -522,12 +522,7 @@ export class GameComponent {
     const roomId = this.roomId();
     if (!roomId) return;
     try {
-      const now = Date.now();
-      await this.gameState.runInTransaction(roomId, (room) => ({
-        ...room,
-        status: 'finished',
-        finishedAt: now,
-      }));
+      await this.roomService.finishGame(roomId, 'manual');
       this.router.navigate(['/history', roomId]);
     } catch (e) {
       this.toastService.error(mapFirebaseError(e));

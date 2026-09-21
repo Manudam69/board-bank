@@ -36,6 +36,9 @@ export class HistoryComponent {
     const edition = this.edition();
     if (!edition) return [];
     return [...(this.room()?.players ?? [])].sort((a, b) => {
+      if (a.bankrupt !== b.bankrupt) {
+        return a.bankrupt ? 1 : -1;
+      }
       const netA = a.cash + a.properties.reduce((sum, pp) => {
         const meta = edition.properties.find((p) => p.id === pp.propertyId);
         return sum + (meta?.price ?? 0);

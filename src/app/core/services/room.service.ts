@@ -4,13 +4,15 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { FirebaseInitService } from './firebase-init.service';
 import { IdService } from './id.service';
 import { AuthService } from './auth.service';
-import type { Player, Room } from '../models';
+import { GameStateService } from './game-state.service';
+import type { Player, Room, TransactionLogEntry } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class RoomService {
   private readonly firebase = inject(FirebaseInitService);
   private readonly id = inject(IdService);
   private readonly auth = inject(AuthService);
+  private readonly gameState = inject(GameStateService);
   private readonly db = this.firebase.db;
 
   private roomsCol() {
@@ -150,6 +152,42 @@ export class RoomService {
       players: remaining,
       hostId: remaining[0].id,
       updatedAt: Date.now(),
+    });
+  }
+
+  async finishGame(
+    roomId: string,
+    reason: 'manual' | 'last-standing',
+    winnerId?: string,
+  ): Promise<void> {
+    const uid = this.currentUid();
+    await this.gameState.runInTransaction(roomId, (room) => {
+      if (room.hostId !== uid) {
+        throw new Error('Solo el host puede terminar la partida');
+      }
+
+      const now = Date.now();
+      const winner = winnerId ? room.players.find((p) => p.id === winnerId) : undefined;
+      const entry: TransactionLogEntry = {
+        id: this.id.newId(),
+        timestamp: now,
+        type: 'game-end',
+        amount: 0,
+        description: winner
+          ? `${winner.name} gana la partida`
+          : reason === 'manual'
+            ? 'El anfitrión terminó la partida'
+            : 'La partida ha terminado',
+        toPlayerId: winner?.id,
+        metadata: { gameEndReason: reason },
+      };
+
+      return {
+        ...room,
+        status: 'finished',
+        finishedAt: now,
+        log: [...room.log, entry],
+      };
     });
   }
 

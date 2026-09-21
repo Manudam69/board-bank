@@ -10,7 +10,8 @@ export type TransactionType =
   | 'tax'
   | 'bank-fee'
   | 'trade'
-  | 'bankruptcy';
+  | 'bankruptcy'
+  | 'undo';
 
 export interface TransactionLogEntry {
   id: string;
@@ -21,6 +22,6 @@ export interface TransactionLogEntry {
   amount: number;
   description: string;
   propertyIds?: string[];
-  /** Detalles extra (ej. resumen de intercambio). */
+  /** Detalles extra (ej. resumen de intercambio, buildKind, undo references). */
   metadata?: Record<string, unknown>;
 }

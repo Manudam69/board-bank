@@ -9,6 +9,7 @@ interface EnrichedLog extends TransactionLogEntry {
   formattedAmount: string;
   isIncoming: boolean;
   isOutgoing: boolean;
+  isUndone: boolean;
   timeAgo: string;
 }
 
@@ -36,6 +37,7 @@ export class LogFeedComponent {
     const me = this.perspectivePlayerId();
     const now = Date.now();
     return [...this.room().log]
+      .filter((entry) => entry.type !== 'undo')
       .sort((a, b) => b.timestamp - a.timestamp)
       .map((entry) => {
         const isIncoming = !!me && entry.toPlayerId === me && entry.amount > 0;
@@ -47,6 +49,7 @@ export class LogFeedComponent {
           formattedAmount: this.formatter.format(entry.amount, this.currency()),
           isIncoming,
           isOutgoing,
+          isUndone: !!entry.metadata?.['undone'],
           timeAgo: this.timeAgo(entry.timestamp, now),
         };
       });
@@ -66,6 +69,7 @@ export class LogFeedComponent {
       'bank-fee': this.icons['banknote'],
       trade: this.icons['arrow-left-right'],
       bankruptcy: this.icons['alert-triangle'],
+      undo: this.icons['rotate-ccw'],
     };
     return map[type];
   }
@@ -84,6 +88,7 @@ export class LogFeedComponent {
       'bank-fee': 'Banco',
       trade: 'Intercambio',
       bankruptcy: 'Quiebra',
+      undo: 'Deshacer',
     };
     return labels[type];
   }

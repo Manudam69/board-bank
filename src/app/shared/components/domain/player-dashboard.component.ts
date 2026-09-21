@@ -48,6 +48,7 @@ export class PlayerDashboardComponent {
   protected moneyReceived = computed(() => {
     const me = this.me().id;
     return this.log().reduce((sum, entry) => {
+      if (entry.type === 'undo' || entry.metadata?.['undone']) return sum;
       if (entry.toPlayerId === me && entry.amount > 0) return sum + entry.amount;
       return sum;
     }, 0);
@@ -58,6 +59,7 @@ export class PlayerDashboardComponent {
   protected moneySpent = computed(() => {
     const me = this.me().id;
     return this.log().reduce((sum, entry) => {
+      if (entry.type === 'undo' || entry.metadata?.['undone']) return sum;
       if (entry.fromPlayerId === me && entry.amount > 0) return sum + entry.amount;
       return sum;
     }, 0);

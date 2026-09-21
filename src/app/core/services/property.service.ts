@@ -17,6 +17,7 @@ export class PropertyService {
     from?: string | 'bank',
     to?: string | 'bank',
     propertyIds?: string[],
+    metadata?: Record<string, unknown>,
   ): TransactionLogEntry {
     return {
       id: this.id.newId(),
@@ -27,6 +28,7 @@ export class PropertyService {
       fromPlayerId: from,
       toPlayerId: to,
       propertyIds,
+      metadata,
     };
   }
 
@@ -220,6 +222,7 @@ export class PropertyService {
         playerId,
         'bank',
         [propertyId],
+        { buildKind: 'house', count },
       );
 
       return { ...room, players, log: [...room.log, log] };
@@ -264,6 +267,7 @@ export class PropertyService {
         playerId,
         'bank',
         [propertyId],
+        { buildKind: 'hotel' },
       );
 
       return { ...room, players, log: [...room.log, log] };
@@ -309,6 +313,7 @@ export class PropertyService {
         'bank',
         playerId,
         [propertyId],
+        { buildKind: 'house', count },
       );
 
       return { ...room, players, log: [...room.log, log] };
@@ -349,6 +354,7 @@ export class PropertyService {
         'bank',
         playerId,
         [propertyId],
+        { buildKind: 'hotel' },
       );
 
       return { ...room, players, log: [...room.log, log] };

@@ -12,6 +12,7 @@ import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SoundService } from '../../core/services/sound.service';
+import { UndoService } from '../../core/services/undo.service';
 import { BankActionsBarComponent, type BankAction } from '../../shared/components/domain/bank-actions-bar.component';
 import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
 import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
@@ -85,6 +86,7 @@ export class GameComponent {
   private readonly auth = inject(AuthService);
   private readonly toastService = inject(ToastService);
   protected readonly soundService = inject(SoundService);
+  private readonly undoService = inject(UndoService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -170,13 +172,16 @@ export class GameComponent {
     this.activeAction.set(null);
   }
 
-  private async runOp(op: () => Promise<void>, success?: SuccessConfig): Promise<void> {
+  private async runOp(op: () => Promise<void>, success?: SuccessConfig, undoable = false): Promise<void> {
     this.busy.set(true);
     try {
       await op();
       this.activeAction.set(null);
       if (success) {
-        this.toastService.success(success.message, success.detail);
+        const action = undoable
+          ? { label: 'Deshacer', run: () => this.undoLastAction() }
+          : undefined;
+        this.toastService.success(success.message, success.detail, action);
         this.soundService.play(success.sound);
       }
     } catch (e) {
@@ -185,6 +190,20 @@ export class GameComponent {
       this.soundService.play('error');
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  private async undoLastAction(): Promise<void> {
+    const roomId = this.roomId();
+    if (!roomId) return;
+    try {
+      await this.undoService.undoLast(roomId);
+      this.toastService.success('Operación deshecha');
+      this.soundService.play('undo');
+    } catch (e) {
+      const message = mapFirebaseError(e);
+      this.toastService.error('No se pudo deshacer', message);
+      this.soundService.play('error');
     }
   }
 
@@ -206,6 +225,7 @@ export class GameComponent {
         detail: `Enviaste ${this.format(data.amount)} a ${toName}`,
         sound: 'transfer',
       },
+      true,
     );
   }
 
@@ -218,6 +238,7 @@ export class GameComponent {
     this.runOp(
       () => this.properties.buyProperty(roomId, edition, me, data.propertyId),
       { message: 'Propiedad comprada', detail: propertyName, sound: 'buy' },
+      true,
     );
   }
 
@@ -244,6 +265,7 @@ export class GameComponent {
         detail: `${this.format(data.amount)} a ${owner.name}`,
         sound: 'cashOut',
       },
+      true,
     );
   }
 
@@ -256,6 +278,7 @@ export class GameComponent {
     this.runOp(
       () => this.properties.mortgage(roomId, edition, me, data.propertyId),
       { message: 'Hipoteca creada', detail: propertyName, sound: 'cashIn' },
+      true,
     );
   }
 
@@ -268,6 +291,7 @@ export class GameComponent {
     this.runOp(
       () => this.properties.unmortgage(roomId, edition, me, data.propertyId),
       { message: 'Hipoteca pagada', detail: propertyName, sound: 'cashOut' },
+      true,
     );
   }
 
@@ -296,7 +320,7 @@ export class GameComponent {
       message: data.mode.startsWith('sell') ? 'Edificio vendido' : 'Construcción realizada',
       detail: propertyName,
       sound: 'build',
-    });
+    }, true);
   }
 
   protected onBankSalary(): void {
@@ -307,6 +331,7 @@ export class GameComponent {
     this.runOp(
       () => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida'),
       { message: 'Sueldo cobrado', detail: this.format(edition.goSalary), sound: 'cashIn' },
+      true,
     );
   }
 
@@ -320,6 +345,7 @@ export class GameComponent {
     this.runOp(
       () => this.bank.payTax(roomId, me, amount, name),
       { message: 'Impuesto pagado', detail: `${name}: ${this.format(amount)}`, sound: 'cashOut' },
+      true,
     );
   }
 

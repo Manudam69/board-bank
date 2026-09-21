@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-type SoundName = 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error';
+type SoundName = 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'undo';
 
 @Injectable({
   providedIn: 'root',
@@ -88,6 +88,15 @@ export class SoundService {
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
         osc.start(t);
         osc.stop(t + 0.15);
+        break;
+      case 'undo':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(659.25, t);
+        osc.frequency.exponentialRampToValueAtTime(440, t + 0.14);
+        gain.gain.setValueAtTime(0.07, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        osc.start(t);
+        osc.stop(t + 0.18);
         break;
     }
   }

@@ -53,6 +53,7 @@ export class BankService {
     toId: string | 'bank',
     amount: number,
     reason: string,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
     if (amount <= 0) throw new Error('La cantidad debe ser mayor que cero');
     if (fromId === toId) throw new Error('Origen y destino no pueden ser iguales');
@@ -72,7 +73,7 @@ export class BankService {
         return p;
       });
 
-      const log = this.buildLog('transfer', amount, reason, fromId, toId);
+      const log = this.buildLog('transfer', amount, reason, fromId, toId, undefined, metadata);
       return { ...room, players, log: [...room.log, log] };
     });
   }
@@ -82,9 +83,10 @@ export class BankService {
     playerId: string,
     amount: number,
     taxName: string,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
     this.ensureActor(playerId);
-    return this.transfer(roomId, playerId, 'bank', amount, `Impuesto: ${taxName}`);
+    return this.transfer(roomId, playerId, 'bank', amount, `Impuesto: ${taxName}`, metadata);
   }
 
   payToBank(
@@ -102,9 +104,10 @@ export class BankService {
     playerId: string,
     amount: number,
     description: string,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
     this.ensureActor(playerId);
-    return this.transfer(roomId, 'bank', playerId, amount, description);
+    return this.transfer(roomId, 'bank', playerId, amount, description, metadata);
   }
 
   declareBankruptcy(roomId: string, playerId: string): Promise<void> {
@@ -121,6 +124,7 @@ export class BankService {
         playerId,
         'bank',
         player.properties.map((pp) => pp.propertyId),
+        { bankAction: 'bankruptcy' },
       );
       return { ...room, players, log: [...room.log, log] };
     });

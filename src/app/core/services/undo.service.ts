@@ -61,7 +61,7 @@ export class UndoService {
         throw new Error('No hay ninguna acción tuya que se pueda deshacer');
       }
 
-      result = this.buildUndoLog(entry);
+      result = this.buildUndoLog(entry, userId);
       return this.applyInverse(room, entry, userId);
     });
     if (!result) {
@@ -121,7 +121,7 @@ export class UndoService {
     });
   }
 
-  private buildUndoLog(entry: TransactionLogEntry): TransactionLogEntry {
+  private buildUndoLog(entry: TransactionLogEntry, undoneBy: string): TransactionLogEntry {
     return {
       id: this.id.newId(),
       timestamp: Date.now(),
@@ -131,29 +131,29 @@ export class UndoService {
       fromPlayerId: entry.toPlayerId,
       toPlayerId: entry.fromPlayerId,
       propertyIds: entry.propertyIds,
-      metadata: { undoesId: entry.id },
+      metadata: { undoesId: entry.id, undoneBy },
     };
   }
 
-  private applyInverse(room: Room, entry: TransactionLogEntry, _userId: string): Room {
+  private applyInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     switch (entry.type) {
       case 'transfer':
-        return this.applyTransferInverse(room, entry);
+        return this.applyTransferInverse(room, entry, userId);
       case 'buy-property':
-        return this.applyBuyInverse(room, entry);
+        return this.applyBuyInverse(room, entry, userId);
       case 'mortgage':
-        return this.applyMortgageInverse(room, entry);
+        return this.applyMortgageInverse(room, entry, userId);
       case 'unmortgage':
-        return this.applyUnmortgageInverse(room, entry);
+        return this.applyUnmortgageInverse(room, entry, userId);
       case 'build-houses':
       case 'sell-houses':
-        return this.applyBuildOrSellInverse(room, entry);
+        return this.applyBuildOrSellInverse(room, entry, userId);
       default:
         throw new Error('Tipo de operación no deshechible');
     }
   }
 
-  private applyTransferInverse(room: Room, entry: TransactionLogEntry): Room {
+  private applyTransferInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     const fromId = entry.fromPlayerId;
     const toId = entry.toPlayerId;
     const amount = entry.amount;
@@ -176,11 +176,11 @@ export class UndoService {
     return {
       ...room,
       players,
-      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry)],
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
     };
   }
 
-  private applyBuyInverse(room: Room, entry: TransactionLogEntry): Room {
+  private applyBuyInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     const playerId = entry.fromPlayerId;
     if (!playerId || playerId === 'bank') throw new Error('Autor no válido');
 
@@ -205,11 +205,11 @@ export class UndoService {
     return {
       ...room,
       players,
-      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry)],
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
     };
   }
 
-  private applyMortgageInverse(room: Room, entry: TransactionLogEntry): Room {
+  private applyMortgageInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     const playerId = entry.toPlayerId;
     if (!playerId || playerId === 'bank') throw new Error('Autor no válido');
 
@@ -242,11 +242,11 @@ export class UndoService {
     return {
       ...room,
       players,
-      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry)],
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
     };
   }
 
-  private applyUnmortgageInverse(room: Room, entry: TransactionLogEntry): Room {
+  private applyUnmortgageInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     const playerId = entry.fromPlayerId;
     if (!playerId || playerId === 'bank') throw new Error('Autor no válido');
 
@@ -276,11 +276,11 @@ export class UndoService {
     return {
       ...room,
       players,
-      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry)],
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
     };
   }
 
-  private applyBuildOrSellInverse(room: Room, entry: TransactionLogEntry): Room {
+  private applyBuildOrSellInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     const playerId = entry.type === 'build-houses' ? entry.fromPlayerId : entry.toPlayerId;
     if (!playerId || playerId === 'bank') throw new Error('Autor no válido');
 
@@ -365,7 +365,7 @@ export class UndoService {
     return {
       ...room,
       players,
-      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry)],
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
     };
   }
 }

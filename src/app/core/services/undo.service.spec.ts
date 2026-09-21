@@ -113,6 +113,21 @@ describe('UndoService', () => {
     expect(lastRoom!.log[1].toPlayerId).toBe('u1');
   });
 
+  it('marks the original entry as undone and appends an undo entry with undoneBy metadata', async () => {
+    lastRoom = makeRoom();
+    lastRoom.log.push(makeEntry({ type: 'transfer', fromPlayerId: 'u1', toPlayerId: 'u2', amount: 100, description: 'Pago' }));
+    lastRoom.players[0].cash = 1400;
+    lastRoom.players[1].cash = 1100;
+
+    await service.undoLast('ROOM');
+
+    expect(lastRoom!.log[0].metadata?.['undone']).toBe(true);
+    expect(lastRoom!.log[1].type).toBe('undo');
+    expect(lastRoom!.log[1].metadata?.['undoesId']).toBe(lastRoom!.log[0].id);
+    expect(lastRoom!.log[1].metadata?.['undoneBy']).toBe('u1');
+    expect(lastRoom!.log[1].description).toBe('Deshecho: Pago');
+  });
+
   it('reverses a salary from bank to player', async () => {
     lastRoom = makeRoom();
     lastRoom.log.push(makeEntry({ type: 'transfer', fromPlayerId: 'bank', toPlayerId: 'u1', amount: 200, description: 'Sueldo' }));

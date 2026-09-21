@@ -36,13 +36,20 @@ import { TransferPanelComponent } from '../../shared/components/domain/transfer-
 import { LogFeedComponent } from '../../shared/components/domain/log-feed.component';
 import { mapFirebaseError } from '../../core/utils/firebase-errors';
 import { ICONS } from '../../shared/icons';
-import type { PropertyMetadata } from '../../core/models';
+import type { PropertyMetadata, TransactionLogEntry } from '../../core/models';
 
 interface SuccessConfig {
   message: string;
   detail?: string;
-  sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error';
+  sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'salary' | 'notify';
 }
+
+type BankActionMeta =
+  | 'salary'
+  | 'income-tax'
+  | 'luxury-tax'
+  | 'bankruptcy'
+  | undefined;
 
 @Component({
   selector: 'app-game',
@@ -149,6 +156,8 @@ export class GameComponent {
     { id: 'log', label: 'Historial', icon: ICONS['history'] },
   ];
 
+  private lastSeenLogId: string | null = null;
+
   constructor() {
     effect(() => {
       const id = this.roomId();
@@ -159,6 +168,34 @@ export class GameComponent {
       const room = this.room();
       if (room?.status === 'finished') {
         this.router.navigate(['/history', room.id]);
+      }
+    });
+
+    effect(() => {
+      const room = this.room();
+      if (!room) {
+        this.lastSeenLogId = null;
+        return;
+      }
+      const log = room.log;
+      const lastId = log.length ? log[log.length - 1].id : null;
+      if (this.lastSeenLogId === null) {
+        this.lastSeenLogId = lastId;
+        return;
+      }
+      if (lastId === this.lastSeenLogId) return;
+
+      const seenIndex = log.findIndex((e) => e.id === this.lastSeenLogId);
+      const fresh = seenIndex === -1 ? [] : log.slice(seenIndex + 1);
+      this.lastSeenLogId = lastId;
+
+      const myId = this.auth.userId() ?? undefined;
+      for (const entry of fresh) {
+        if (entry.type === 'undo') {
+          this.notifyUndoIfNeeded(entry, myId);
+        } else {
+          this.notifyBankActionIfNeeded(entry, myId);
+        }
       }
     });
 
@@ -330,8 +367,8 @@ export class GameComponent {
     const me = this.requireCurrentPlayer();
     if (!roomId || !edition) return;
     this.runOp(
-      () => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida'),
-      { message: 'Sueldo cobrado', detail: this.format(edition.goSalary), sound: 'cashIn' },
+      () => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida', { bankAction: 'salary' }),
+      { message: 'Sueldo cobrado', detail: this.format(edition.goSalary), sound: 'salary' },
       true,
     );
   }
@@ -343,8 +380,9 @@ export class GameComponent {
     if (!roomId || !edition) return;
     const amount = type === 'income' ? edition.incomeTax : edition.luxuryTax;
     const name = type === 'income' ? 'Impuesto sobre la renta' : 'Impuesto de lujo';
+    const bankAction: BankActionMeta = type === 'income' ? 'income-tax' : 'luxury-tax';
     this.runOp(
-      () => this.bank.payTax(roomId, me, amount, name),
+      () => this.bank.payTax(roomId, me, amount, name, { bankAction }),
       { message: 'Impuesto pagado', detail: `${name}: ${this.format(amount)}`, sound: 'cashOut' },
       true,
     );
@@ -495,6 +533,47 @@ export class GameComponent {
       case 'build':
         this.activeAction.set('build');
         break;
+    }
+  }
+
+  private notifyUndoIfNeeded(entry: TransactionLogEntry, myId?: string): void {
+    const undoneBy = entry.metadata?.['undoneBy'] as string | undefined;
+    if (!undoneBy || undoneBy === myId) return;
+
+    this.toastService.info(`${this.playerName(undoneBy)} deshizo una acción`, entry.description);
+    this.soundService.play('notify');
+  }
+
+  private playerName(playerId?: string | 'bank'): string {
+    if (playerId === undefined || playerId === 'bank') return 'Alguien';
+    return this.room()?.players.find((p) => p.id === playerId)?.name ?? 'Alguien';
+  }
+
+  private notifyBankActionIfNeeded(entry: TransactionLogEntry, myId?: string): void {
+    const action = (entry.metadata?.['bankAction'] as BankActionMeta) ?? undefined;
+    if (!action) return;
+
+    const actorId = action === 'salary' ? entry.toPlayerId : entry.fromPlayerId;
+    if (actorId === myId) return;
+
+    switch (action) {
+      case 'salary': {
+        this.toastService.info(`${this.playerName(actorId)} cobró el sueldo`, this.format(entry.amount));
+        this.soundService.play('notify');
+        break;
+      }
+      case 'income-tax':
+      case 'luxury-tax': {
+        const taxLabel = action === 'income-tax' ? 'Impuesto sobre la renta' : 'Impuesto de lujo';
+        this.toastService.info(`${this.playerName(actorId)} pagó ${taxLabel.toLowerCase()}`, `-${this.format(entry.amount)}`);
+        this.soundService.play('notify');
+        break;
+      }
+      case 'bankruptcy': {
+        this.toastService.info(`${this.playerName(actorId)} se declaró en quiebra`, 'Queda fuera de la partida');
+        this.soundService.play('notify');
+        break;
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-type SoundName = 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'undo';
+type SoundName = 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'undo' | 'salary' | 'notify';
 
 @Injectable({
   providedIn: 'root',
@@ -72,6 +72,16 @@ export class SoundService {
         osc.start(t);
         osc.stop(t + 0.18);
         break;
+      case 'salary':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, t);
+        osc.frequency.setValueAtTime(659.25, t + 0.06);
+        osc.frequency.setValueAtTime(783.99, t + 0.12);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc.start(t);
+        osc.stop(t + 0.28);
+        break;
       case 'cashOut':
         osc.type = 'sine';
         osc.frequency.setValueAtTime(440, t);
@@ -97,6 +107,15 @@ export class SoundService {
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
         osc.start(t);
         osc.stop(t + 0.18);
+        break;
+      case 'notify':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, t);
+        osc.frequency.setValueAtTime(880, t + 0.1);
+        gain.gain.setValueAtTime(0.07, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+        osc.start(t);
+        osc.stop(t + 0.24);
         break;
     }
   }

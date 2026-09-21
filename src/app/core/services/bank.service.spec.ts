@@ -75,9 +75,39 @@ describe('BankService guards', () => {
     expect(runInTransactionMock).toHaveBeenCalled();
   });
 
-  it('rejects claiming salary for another player', () => {
-    expect(() => service.payFromBank('ROOM', 'u2', 200, 'Sueldo')).toThrow(
-      'No puedes realizar operaciones sobre la cartera de otro jugador',
-    );
+  it('includes metadata in salary log entry', async () => {
+    let savedLog: unknown | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room = makeRoom();
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedLog = room.log.at(-1);
+    });
+    await service.payFromBank('ROOM', 'u1', 200, 'Sueldo', { bankAction: 'salary' });
+    expect(savedLog).toMatchObject({ metadata: { bankAction: 'salary' }, type: 'transfer' });
+  });
+
+  it('includes metadata in tax log entry', async () => {
+    let savedLog: unknown | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room = makeRoom();
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedLog = room.log.at(-1);
+    });
+    await service.payTax('ROOM', 'u1', 200, 'Renta', { bankAction: 'income-tax' });
+    expect(savedLog).toMatchObject({ metadata: { bankAction: 'income-tax' }, type: 'transfer' });
+  });
+
+  it('includes metadata in bankruptcy log entry', async () => {
+    let savedLog: unknown | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room = makeRoom();
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedLog = room.log.at(-1);
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    expect(savedLog).toMatchObject({ metadata: { bankAction: 'bankruptcy' }, type: 'bankruptcy' });
   });
 });

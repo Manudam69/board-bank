@@ -14,7 +14,7 @@
           <h1 class="text-2xl font-bold text-text">{{ edition()!.name }}</h1>
         </div>
         <div class="flex gap-2">
-          <app-button variant="ghost" size="sm" (clickAction)="leave()">Salir</app-button>
+          <app-button variant="ghost" size="sm" (clickAction)="promptLeave()">Salir</app-button>
           @if (isHost()) {
             <app-button size="sm" [loading]="starting()" [disabled]="!canStart()" (clickAction)="startGame()">
               Empezar partida
@@ -59,3 +59,12 @@
     </div>
   }
 </div>
+
+<app-confirm-dialog
+  [open]="confirmLeaveOpen()"
+  title="¿Salir de la sala?"
+  message="Si abandonas el lobby, tu lugar quedará libre. Podrás volver a unirte con el código mientras la partida no haya empezado."
+  confirmLabel="Salir"
+  confirmVariant="danger"
+  (confirmed)="onLeaveConfirmed($event)"
+/>

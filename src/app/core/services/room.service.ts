@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { FirebaseInitService } from './firebase-init.service';
 import { IdService } from './id.service';
 import { AuthService } from './auth.service';
@@ -36,6 +36,7 @@ export class RoomService {
       joinedAt: Date.now(),
     };
 
+    const now = Date.now();
     const room: Room = {
       id: roomId,
       editionId,
@@ -44,8 +45,8 @@ export class RoomService {
       players: [host],
       log: [],
       trades: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     await setDoc(doc(this.db, this.roomsCol(), roomId), room);
@@ -89,9 +90,10 @@ export class RoomService {
     };
 
     const updatedPlayers = [...room.players, newPlayer];
-    await updateDoc(roomRef, { players: updatedPlayers });
+    const now = Date.now();
+    await updateDoc(roomRef, { players: updatedPlayers, updatedAt: now });
 
-    return { ...room, players: updatedPlayers };
+    return { ...room, players: updatedPlayers, updatedAt: now };
   }
 
   async startGame(roomId: string, editionStartingMoney: number): Promise<void> {
@@ -108,8 +110,9 @@ export class RoomService {
       ...p,
       cash: editionStartingMoney,
     }));
+    const now = Date.now();
 
-    await updateDoc(roomRef, { status: 'playing', players });
+    await updateDoc(roomRef, { status: 'playing', players, updatedAt: now });
   }
 
   async leaveRoom(roomId: string, playerId: string): Promise<void> {
@@ -124,7 +127,12 @@ export class RoomService {
 
     const remaining = room.players.filter((p) => p.id !== playerId);
     if (remaining.length === 0) {
-      await updateDoc(roomRef, { status: 'finished' });
+      if (room.status === 'lobby' && room.log.length === 0) {
+        await deleteDoc(roomRef);
+      } else {
+        const now = Date.now();
+        await updateDoc(roomRef, { status: 'finished', finishedAt: now, updatedAt: now });
+      }
       return;
     }
 
@@ -134,6 +142,7 @@ export class RoomService {
     await updateDoc(roomRef, {
       players: remaining,
       hostId: remaining[0].id,
+      updatedAt: Date.now(),
     });
   }
 

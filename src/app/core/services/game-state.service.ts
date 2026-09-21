@@ -1,14 +1,17 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { doc, onSnapshot, runTransaction, type Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { FirebaseInitService } from './firebase-init.service';
 import { cleanFirestoreData } from '../utils/clean-firestore-data';
 import type { Room } from '../models';
+
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private readonly firebase = inject(FirebaseInitService);
   private readonly db = this.firebase.db;
   private unsub?: Unsubscribe;
+  private heartbeatTimer?: ReturnType<typeof setInterval>;
 
   readonly room = signal<Room | null>(null);
   readonly loading = signal(false);
@@ -17,6 +20,7 @@ export class GameStateService {
 
   subscribe(roomId: string): void {
     this.unsub?.();
+    this.stopHeartbeat();
     this.loading.set(true);
     this.error.set(null);
     this.connected.set(false);
@@ -40,13 +44,34 @@ export class GameStateService {
         this.connected.set(false);
       },
     );
+
+    this.startHeartbeat(ref);
   }
 
   unsubscribe(): void {
     this.unsub?.();
     this.unsub = undefined;
+    this.stopHeartbeat();
     this.room.set(null);
     this.connected.set(false);
+  }
+
+  private startHeartbeat(ref: ReturnType<typeof doc>): void {
+    this.touch(ref);
+    this.heartbeatTimer = setInterval(() => this.touch(ref), HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+    }
+  }
+
+  private touch(ref: ReturnType<typeof doc>): void {
+    updateDoc(ref, { updatedAt: Date.now() }).catch(() => {
+      // Ignore heartbeat failures (offline permissions, deleted room, etc.).
+    });
   }
 
   async runInTransaction(

@@ -67,6 +67,13 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 4. Copy the contents of `firestore.rules` (in the project root) into Firebase Console → Firestore Database → Rules, then click **Publish**. The rules require an authenticated user to read/write rooms and custom editions. Full per-player server validation would require restructuring the room into per-player subdocuments; the "only self-service" behavior is enforced by client-side guards.
 5. If you see "Missing or insufficient permissions", it means the rules have not been published or Anonymous Auth is disabled.
 
+### Room Auto-cleanup
+- A client-only `RoomJanitorService` runs once at app startup and classifies every room.
+- Active rooms (`lobby`/`playing`) are considered stale after **24 h** of inactivity (no `updatedAt` heartbeat). Stale `playing` rooms and started `lobby` rooms are marked `finished`; never-started `lobby` rooms are deleted directly.
+- `finished` rooms are kept for **7 d** after `finishedAt` and then deleted.
+- `GameStateService` writes a heartbeat to `updatedAt` every **60 s** while subscribed to a room, so an open app keeps its room alive.
+- No Cloud Functions or Firestore rules changes are required; the existing `allow write` rule already permits `deleteDoc`.
+
 ### Architecture
 - Domain models: `src/app/core/models/`
 - Business + Firebase services: `src/app/core/services/`

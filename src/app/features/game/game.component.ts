@@ -117,6 +117,7 @@ export class GameComponent {
   readonly activeAction = signal<BankAction | null>(null);
   readonly busy = signal(false);
   readonly confirmBankruptcyOpen = signal(false);
+  readonly confirmLeaveOpen = signal(false);
   readonly confirmFinishOpen = signal(false);
   readonly selectedProperty = signal<PropertyMetadata | undefined>(undefined);
   readonly selectedPropertyActions = signal<{
@@ -414,7 +415,12 @@ export class GameComponent {
     const roomId = this.roomId();
     if (!roomId) return;
     try {
-      await this.gameState.runInTransaction(roomId, (room) => ({ ...room, status: 'finished' }));
+      const now = Date.now();
+      await this.gameState.runInTransaction(roomId, (room) => ({
+        ...room,
+        status: 'finished',
+        finishedAt: now,
+      }));
       this.router.navigate(['/history', roomId]);
     } catch (e) {
       this.toastService.error(mapFirebaseError(e));
@@ -422,7 +428,13 @@ export class GameComponent {
     }
   }
 
-  protected async leave(): Promise<void> {
+  protected promptLeave(): void {
+    this.confirmLeaveOpen.set(true);
+  }
+
+  protected async onLeaveConfirmed(confirmed: boolean): Promise<void> {
+    this.confirmLeaveOpen.set(false);
+    if (!confirmed) return;
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
     if (!roomId) return;

@@ -60,7 +60,7 @@
             type="button"
             class="focus-ring-inset rounded-full p-2 text-text-muted transition hover:bg-surface-elevated hover:text-text focus:outline-none"
             aria-label="Salir de la sala"
-            (click)="leave()"
+            (click)="promptLeave()"
           >
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['logOut']" />
@@ -271,6 +271,15 @@
   confirmLabel="Declarar bancarrota"
   confirmVariant="danger"
   (confirmed)="onBankruptcyConfirmed($event)"
+/>
+
+<app-confirm-dialog
+  [open]="confirmLeaveOpen()"
+  title="¿Salir de la sala?"
+  message="Si eres el último jugador, la partida terminará para todos. ¿Estás seguro?"
+  confirmLabel="Salir"
+  confirmVariant="danger"
+  (confirmed)="onLeaveConfirmed($event)"
 />
 
 <app-confirm-dialog

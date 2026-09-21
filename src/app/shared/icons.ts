@@ -19,7 +19,7 @@ export const ICONS: { [key: string]: string } = {
   history: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   wallet: 'M20 12V8H6a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2v-4h-6a2 2 0 01-2-2z',
   logOut: 'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9',
-  'power-off': 'M18.36 6.64a9 9 0 111.41 1.41l-4.95-4.95M12 2v10',
+  'power-off': 'M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10',
   check: 'M5 13l4 4L19 7',
   x: 'M6 18L18 6M6 6l12 12',
   'alert-triangle':

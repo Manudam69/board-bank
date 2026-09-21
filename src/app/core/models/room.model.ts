@@ -18,4 +18,6 @@ export interface Room {
   /** Para retomar o bloquear edición mientras dure la partida. */
   createdAt: number;
   updatedAt: number;
+  /** Fecha en la que la sala pasó a status 'finished'. */
+  finishedAt?: number;
 }

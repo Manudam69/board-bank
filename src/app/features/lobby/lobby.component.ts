@@ -7,12 +7,13 @@ import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
 import { RoomService } from '../../core/services/room.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
+import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
 import { PlayerCardComponent } from '../../shared/components/domain/player-card.component';
 
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [ButtonComponent, PlayerCardComponent],
+  imports: [ButtonComponent, ConfirmDialogComponent, PlayerCardComponent],
   templateUrl: './lobby.component.html',
 })
 export class LobbyComponent {
@@ -44,6 +45,7 @@ export class LobbyComponent {
   readonly starting = signal(false);
   readonly leaving = signal(false);
   readonly copied = signal(false);
+  readonly confirmLeaveOpen = signal(false);
 
   constructor() {
     effect(() => {
@@ -88,7 +90,14 @@ export class LobbyComponent {
     }
   }
 
-  protected async leave(): Promise<void> {
+  protected promptLeave(): void {
+    this.confirmLeaveOpen.set(true);
+  }
+
+  protected async onLeaveConfirmed(confirmed: boolean): Promise<void> {
+    this.confirmLeaveOpen.set(false);
+    if (!confirmed) return;
+
     const room = this.room();
     const userId = this.auth.userId();
     if (!room || !userId) return;

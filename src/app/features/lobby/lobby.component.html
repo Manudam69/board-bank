@@ -47,48 +47,126 @@
       </div>
 
       <!-- Code card -->
-      <div class="rounded-2xl border border-border bg-surface p-5 text-center">
-        <p class="text-sm font-medium text-text-secondary">Comparte el código con tus amigos</p>
-        <div class="mt-3 flex items-center justify-center gap-3">
-          <p class="text-4xl font-black tracking-[0.35em] text-text sm:text-5xl">
-            {{ room()!.id | spacedCode }}
-          </p>
+      <div class="rounded-2xl border border-border bg-surface p-5">
+        <p class="text-center text-sm font-medium text-text-secondary sm:text-left">
+          Comparte el código, el enlace o el QR con tus amigos
+        </p>
+        <div class="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex flex-col items-center gap-3 sm:items-start">
+            <p class="text-4xl font-black tracking-[0.35em] text-text sm:text-5xl">
+              {{ room()!.id | spacedCode }}
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                class="focus-ring-inset inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-hover hover:text-text"
+                (click)="copyCode()"
+              >
+                @if (copied()) {
+                  <svg
+                    class="h-4 w-4 text-positive"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span class="text-positive">Código copiado</span>
+                } @else {
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Copiar código
+                }
+              </button>
+
+              <button
+                type="button"
+                class="focus-ring-inset inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-hover hover:text-text"
+                (click)="copyLink()"
+              >
+                @if (linkCopied()) {
+                  <svg
+                    class="h-4 w-4 text-positive"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span class="text-positive">Enlace copiado</span>
+                } @else {
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"
+                    />
+                  </svg>
+                  Copiar enlace
+                }
+              </button>
+
+              @if (canShare) {
+                <button
+                  type="button"
+                  class="focus-ring-inset inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
+                  (click)="shareInvite()"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"
+                    />
+                  </svg>
+                  Compartir
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col items-center gap-2">
+            <div class="rounded-xl bg-white p-3 shadow-lg">
+              @if (inviteUrl()) {
+                <app-qr-code [value]="inviteUrl()" [size]="128" />
+              } @else {
+                <div class="h-32 w-32 animate-shimmer rounded-lg"></div>
+              }
+            </div>
+            <p class="text-xs text-text-muted">Escanea para unirte</p>
+          </div>
         </div>
-        <button
-          type="button"
-          class="focus-ring-inset mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-hover hover:text-text"
-          (click)="copyCode()"
-        >
-          @if (copied()) {
-            <svg
-              class="h-4 w-4 text-positive"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <span class="text-positive">Código copiado</span>
-          } @else {
-            <svg
-              class="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-            Copiar código
-          }
-        </button>
       </div>
 
       <!-- Players stack -->

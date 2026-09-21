@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+
 import { FirebaseInitService } from './firebase-init.service';
 import { IdService } from './id.service';
 import { AuthService } from './auth.service';
@@ -20,6 +21,11 @@ export class RoomService {
     const uid = this.auth.userId();
     if (!uid) throw new Error('Debes estar conectado para realizar esta acción');
     return uid;
+  }
+
+  async getRoom(roomId: string): Promise<Room | null> {
+    const snap = await getDoc(doc(this.db, this.roomsCol(), roomId.toUpperCase()));
+    return snap.exists() ? (snap.data() as Room) : null;
   }
 
   async createRoom(editionId: string, hostName: string): Promise<Room> {
@@ -61,14 +67,15 @@ export class RoomService {
     }
 
     const room = snap.data() as Room;
-    if (room.status !== 'lobby') {
-      throw new Error('La partida ya ha comenzado o ha terminado.');
-    }
 
     const uid = this.currentUid();
     const existing = room.players.find((p) => p.id === uid);
     if (existing) {
       return room;
+    }
+
+    if (room.status !== 'lobby') {
+      throw new Error('La partida ya ha comenzado o ha terminado.');
     }
 
     if (room.players.some((p) => p.name.toLowerCase() === playerName.toLowerCase())) {

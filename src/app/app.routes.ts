@@ -7,6 +7,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
   },
   {
+    path: 'join/:roomId',
+    title: 'Unirse — BoardBank',
+    loadComponent: () => import('./features/join/join.component').then((m) => m.JoinComponent),
+  },
+  {
     path: 'lobby/:roomId',
     title: 'Sala — BoardBank',
     loadComponent: () => import('./features/lobby/lobby.component').then((m) => m.LobbyComponent),

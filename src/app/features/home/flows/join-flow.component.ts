@@ -6,7 +6,7 @@ import { RoomService } from '../../../core/services/room.service';
 import { SoundService } from '../../../core/services/sound.service';
 import { mapFirebaseError } from '../../../core/utils/firebase-errors';
 import { ButtonComponent } from '../../../shared/components/ui/button.component';
-import { PlayerNameStepComponent } from './player-name-step.component';
+import { PlayerNameStepComponent } from '../../../shared/components/domain/player-name-step.component';
 
 type JoinStatus = 'idle' | 'searching' | 'found' | 'error';
 

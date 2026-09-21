@@ -10,7 +10,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from '../../../shared/components/ui/button.component';
+import { ButtonComponent } from '../../components/ui/button.component';
 
 @Component({
   selector: 'app-player-name-step',

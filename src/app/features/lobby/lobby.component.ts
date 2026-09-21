@@ -17,6 +17,7 @@ import { RoomService } from '../../core/services/room.service';
 import { SoundService } from '../../core/services/sound.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
+import { QrCodeComponent } from '../../shared/components/ui/qr-code.component';
 import { SpinnerComponent } from '../../shared/components/ui/spinner.component';
 import { SpacedCodePipe } from '../../shared/pipes/spaced-code.pipe';
 
@@ -24,7 +25,7 @@ const MAX_PLAYERS = 8;
 
 @Component({
   selector: 'app-lobby',
-  imports: [ButtonComponent, ConfirmDialogComponent, SpinnerComponent, SpacedCodePipe],
+  imports: [ButtonComponent, ConfirmDialogComponent, QrCodeComponent, SpinnerComponent, SpacedCodePipe],
   templateUrl: './lobby.component.html',
 })
 export class LobbyComponent {
@@ -57,9 +58,18 @@ export class LobbyComponent {
   readonly starting = signal(false);
   readonly leaving = signal(false);
   readonly copied = signal(false);
+  readonly linkCopied = signal(false);
   readonly confirmLeaveOpen = signal(false);
   readonly showStartOverlay = signal(false);
   protected readonly MAX_PLAYERS = MAX_PLAYERS;
+
+  readonly inviteUrl = computed(() => {
+    const id = this.room()?.id;
+    if (!id) return '';
+    return `${location.origin}/join/${id}`;
+  });
+
+  readonly canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   readonly ghostSlots = computed(() => {
     const count = this.room()?.players.length ?? 0;
@@ -124,6 +134,32 @@ export class LobbyComponent {
       setTimeout(() => this.copied.set(false), 2000);
     } catch {
       this.copied.set(false);
+    }
+  }
+
+  protected async copyLink(): Promise<void> {
+    const url = this.inviteUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.linkCopied.set(true);
+      setTimeout(() => this.linkCopied.set(false), 2000);
+    } catch {
+      this.linkCopied.set(false);
+    }
+  }
+
+  protected async shareInvite(): Promise<void> {
+    const url = this.inviteUrl();
+    if (!url || !this.canShare) return;
+    try {
+      await navigator.share({
+        title: 'BoardBank',
+        text: 'Únete a mi partida de BoardBank',
+        url,
+      });
+    } catch {
+      // Usuario canceló o falló; no mostrar error.
     }
   }
 

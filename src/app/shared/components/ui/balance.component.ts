@@ -1,8 +1,17 @@
-import { Component, computed, effect, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { MoneyDisplayComponent } from '../domain/money-display.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { ICONS } from '../../icons';
 import type { CurrencyConfig } from '../../../core/models';
+
+interface BalanceDelta {
+  id: number;
+  value: number;
+  timestamp: number;
+}
+
+const DELTA_DURATION_MS = 1400;
+const MAX_STACKED_DELTAS = 3;
 
 @Component({
   selector: 'app-balance',
@@ -15,9 +24,16 @@ export class BalanceComponent {
   readonly currency = input.required<CurrencyConfig>();
   readonly size = input<'sm' | 'md' | 'lg' | 'xl'>('md');
 
-  protected readonly delta = signal<{ value: number; trigger: number } | null>(null);
+  protected readonly deltas = signal<BalanceDelta[]>([]);
   protected readonly icons = ICONS;
+
   private lastAmount: number | undefined;
+  private nextId = 0;
+  private timers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected hasDelta = computed(() => this.deltas().length > 0);
+  protected pulseEven = computed(() => this.deltas().length > 0 && this.deltas()[this.deltas().length - 1].id % 2 === 0);
 
   constructor() {
     effect(() => {
@@ -25,17 +41,34 @@ export class BalanceComponent {
       if (this.lastAmount !== undefined) {
         const diff = current - this.lastAmount;
         if (diff !== 0) {
-          this.delta.set({ value: diff, trigger: Date.now() });
+          this.addDelta(diff);
         }
       }
       this.lastAmount = current;
     });
+
+    this.destroyRef.onDestroy(() => {
+      for (const timer of this.timers.values()) {
+        clearTimeout(timer);
+      }
+      this.timers.clear();
+    });
   }
 
-  protected deltaFormatted = computed(() => {
-    const d = this.delta();
-    return d && d.value !== 0 ? d.value : null;
-  });
+  private addDelta(value: number): void {
+    const id = this.nextId++;
+    const delta: BalanceDelta = { id, value, timestamp: Date.now() };
+    this.deltas.update((list) => {
+      const next = [...list, delta];
+      return next.length > MAX_STACKED_DELTAS ? next.slice(next.length - MAX_STACKED_DELTAS) : next;
+    });
 
-  protected deltaPositive = computed(() => (this.delta()?.value ?? 0) > 0);
+    const timer = setTimeout(() => this.removeDelta(id), DELTA_DURATION_MS);
+    this.timers.set(id, timer);
+  }
+
+  private removeDelta(id: number): void {
+    this.timers.delete(id);
+    this.deltas.update((list) => list.filter((d) => d.id !== id));
+  }
 }

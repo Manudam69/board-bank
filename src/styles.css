@@ -220,6 +220,16 @@ body {
   }
 }
 
+@keyframes pulse-balance-alt {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -255,6 +265,10 @@ body {
 
 .animate-pulse-balance {
   animation: pulse-balance 250ms ease-out forwards;
+}
+
+.animate-pulse-balance-alt {
+  animation: pulse-balance-alt 250ms ease-out forwards;
 }
 
 .animate-shimmer {
@@ -307,6 +321,7 @@ a,
   .animate-toast-in,
   .animate-delta-up,
   .animate-pulse-balance,
+  .animate-pulse-balance-alt,
   .animate-shimmer {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

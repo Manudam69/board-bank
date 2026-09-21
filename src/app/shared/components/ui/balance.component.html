@@ -3,17 +3,19 @@
     [amount]="amount()"
     [currency]="currency()"
     [size]="size()"
-    [class.animate-pulse-balance]="deltaFormatted() !== null"
+    [class.animate-pulse-balance]="pulseEven()"
+    [class.animate-pulse-balance-alt]="!pulseEven() && hasDelta()"
   />
 
-  @if (deltaFormatted(); as deltaValue) {
+  @for (d of deltas(); track d.id) {
     <div
       class="pointer-events-none absolute left-full top-0 ml-1.5 flex items-center gap-0.5 whitespace-nowrap text-xs font-semibold animate-delta-up"
-      [class.text-positive]="deltaPositive()"
-      [class.text-negative]="!deltaPositive()"
+      [style.top]="($index * 1.25) + 'rem'"
+      [class.text-positive]="d.value > 0"
+      [class.text-negative]="d.value < 0"
       aria-hidden="true"
     >
-      @if (deltaPositive()) {
+      @if (d.value > 0) {
         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-up']" />
         </svg>
@@ -22,7 +24,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['trending-down']" />
         </svg>
       }
-      {{ deltaPositive() ? '+' : '' }}{{ deltaValue | money: currency() }}
+      {{ d.value > 0 ? '+' : '' }}{{ d.value | money: currency() }}
     </div>
   }
 </div>

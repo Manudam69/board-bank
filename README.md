@@ -1,5 +1,17 @@
 # BoardBank
 
+BoardBank is a digital banker for your Monopoly board games. It replaces the paper money and manual bookkeeping with a real-time, multiplayer web app: one player creates a room and shares a code, QR, or link, everyone else joins from their own phone, and all cash transfers, rent payments, property purchases, mortgages, building of houses/hotels, and player-to-player trades are tracked automatically and kept in sync across every device via Firebase.
+
+Key features:
+
+- **No sign-up, free, multiplayer** — join a room instantly with a short code or QR and play together.
+- **Digital cash & bank operations** — pay/collect salary, taxes, rent, and transfers without handling physical bills.
+- **Properties, mortgages & buildings** — buy, mortgage/unmortgage properties, and build/sell houses and hotels.
+- **Trades** — propose and accept trades of cash and properties between players.
+- **Multiple editions** — supports different Monopoly editions with their own board, currency, and rules.
+- **Full game log & history** — every operation is recorded so you can review or undo recent actions.
+- **Automatic bankruptcy & game end detection** — the last player standing wins.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.8.
 
 ## Development server

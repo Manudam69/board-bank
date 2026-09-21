@@ -19,10 +19,19 @@ describe('MoneyFormatService', () => {
   const service = new MoneyFormatService();
 
   const cases: { currency: CurrencyConfig; amount: number; expected: string }[] = [
-    { currency: { symbol: '€', code: 'EUR', scale: 'units' }, amount: 1500, expected: '€1.500' },
-    { currency: { symbol: '$', code: 'USD', scale: 'thousands' }, amount: 1_500_000, expected: '$1.500k' },
+    { currency: { symbol: '€', code: 'EUR', scale: 'units' }, amount: 1500, expected: '€1,500' },
+    { currency: { symbol: '€', code: 'EUR', scale: 'units' }, amount: 999_999, expected: '€999,999' },
+    { currency: { symbol: '$', code: 'USD', scale: 'thousands' }, amount: 1_500_000, expected: '$1,500k' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 0, expected: 'M$0' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 500, expected: 'M$500' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 20_000, expected: 'M$20k' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 280_000, expected: 'M$280k' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 1_180_000, expected: 'M$1.18M' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 999_999, expected: 'M$1M' },
     { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: 150_000_000, expected: 'M$150M' },
-    { currency: { symbol: 'B$', code: 'BILLION', scale: 'billions' }, amount: 1_200_000_000, expected: 'B$1,2B' },
+    { currency: { symbol: 'M$', code: 'MILLION', scale: 'millions' }, amount: -20_000, expected: 'M$-20k' },
+    { currency: { symbol: 'B$', code: 'BILLION', scale: 'billions' }, amount: 500_000_000, expected: 'B$500M' },
+    { currency: { symbol: 'B$', code: 'BILLION', scale: 'billions' }, amount: 1_200_000_000, expected: 'B$1.2B' },
     { currency: { symbol: 'T$', code: 'TRILLION', scale: 'trillions' }, amount: 1_000_000_000_000, expected: 'T$1T' },
   ];
 
@@ -37,7 +46,7 @@ describe('MoneyFormatService', () => {
 
   it('formats exact full value with thousands separators', () => {
     const currency: CurrencyConfig = { symbol: '$', code: 'USD', scale: 'millions' };
-    expect(service.formatExact(1_180_000, currency)).toBe('$1.180.000');
+    expect(service.formatExact(1_180_000, currency)).toBe('$1,180,000');
     expect(service.formatExact(0, currency)).toBe('$0');
   });
 

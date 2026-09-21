@@ -19,7 +19,7 @@ const SUFFIX_REGEX = /([kKmMbBtT])$/;
 function normalizeMantissa(value: string): string {
   return value
     .replace(/\s/g, '')
-    .replace(/,/g, '.')
+    .replace(/,/g, '')
     .replace(/[^0-9.]/g, (match) => (SUFFIX_REGEX.test(match) ? match : ''));
 }
 
@@ -43,7 +43,7 @@ function findSuffix(value: string): ScaleStep | null {
 
 function formatMantissa(value: number | null): string {
   if (value === null || value === 0) return '';
-  return value.toString().replace('.', ',');
+  return value.toString();
 }
 
 @Component({

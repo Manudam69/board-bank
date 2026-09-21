@@ -26,14 +26,31 @@ export class MoneyFormatService {
   };
 
   format(amount: number, currency: CurrencyConfig): string {
-    const divisor = this.scales[currency.scale];
-    const scaled = amount / divisor;
-    const suffix = this.suffixes[currency.scale];
+    const baseStep = this.getScaleStep(currency.scale);
+    const baseIndex = SCALE_STEPS.findIndex((s) => s.id === baseStep.id);
+    const sign = amount < 0 ? '-' : '';
+    const abs = Math.abs(amount);
+
+    let stepIndex = 0;
+    for (let i = baseIndex; i >= 0; i--) {
+      if (abs >= SCALE_STEPS[i].factor) {
+        stepIndex = i;
+        break;
+      }
+    }
+
+    let scaled = abs / SCALE_STEPS[stepIndex].factor;
+    if (stepIndex < baseIndex && scaled.toFixed(2).startsWith('1000')) {
+      stepIndex += 1;
+      scaled = abs / SCALE_STEPS[stepIndex].factor;
+    }
+
+    const suffix = this.stepIdToSuffix(SCALE_STEPS[stepIndex].id);
     const scaledFixed = scaled.toFixed(2);
     const [intPart, decPart] = scaledFixed.split('.');
-    const withGroups = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    const trimmedDecimals = decPart === '00' ? '' : `,${decPart.replace(/0+$/, '')}`;
-    return `${currency.symbol}${withGroups}${trimmedDecimals}${suffix}`;
+    const withGroups = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const trimmedDecimals = decPart === '00' ? '' : `.${decPart.replace(/0+$/, '')}`;
+    return `${currency.symbol}${sign}${withGroups}${trimmedDecimals}${suffix}`;
   }
 
   parse(value: number, currency: CurrencyConfig): number {
@@ -42,7 +59,7 @@ export class MoneyFormatService {
 
   formatExact(amount: number, currency: CurrencyConfig): string {
     const value = Math.max(0, Math.round(amount));
-    const withGroups = value.toLocaleString('es-ES', {
+    const withGroups = value.toLocaleString('en-US', {
       maximumFractionDigits: 0,
     });
     return `${currency.symbol}${withGroups}`;
@@ -67,6 +84,21 @@ export class MoneyFormatService {
 
   getScaleStep(scale: CurrencyConfig['scale']): ScaleStep {
     return SCALE_STEPS.find((s) => s.factor === this.scales[scale]) ?? SCALE_STEPS[0];
+  }
+
+  private stepIdToSuffix(id: ScaleStep['id']): string {
+    switch (id) {
+      case 'K':
+        return 'k';
+      case 'M':
+        return 'M';
+      case 'B':
+        return 'B';
+      case 'T':
+        return 'T';
+      default:
+        return '';
+    }
   }
 
   private estimateMaxAmount(edition: Edition): number {

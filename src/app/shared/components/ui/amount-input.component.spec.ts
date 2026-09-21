@@ -40,7 +40,7 @@ describe('AmountInputComponent', () => {
     });
   });
 
-  it('typing 1.18 with M selected computes 1.180.000', async () => {
+  it('typing 1.18 with M selected computes 1,180,000', async () => {
     const fixture = TestBed.createComponent(AmountInputComponent);
     fixture.componentRef.setInput('currency', currency);
     fixture.componentRef.setInput('edition', edition());
@@ -48,13 +48,13 @@ describe('AmountInputComponent', () => {
     await fixture.whenStable();
 
     const input = fixture.nativeElement.querySelector('input');
-    input.value = '1,18';
+    input.value = '1.18';
     input.dispatchEvent(new InputEvent('input'));
     fixture.detectChanges();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.amount()).toBe(1_180_000);
-    expect(fixture.nativeElement.textContent).toContain('$1.180.000');
+    expect(fixture.nativeElement.textContent).toContain('$1,180,000');
   });
 
   it('switching scale keeps mantissa and recomputes value', async () => {
@@ -65,7 +65,7 @@ describe('AmountInputComponent', () => {
     await fixture.whenStable();
 
     const input = fixture.nativeElement.querySelector('input');
-    input.value = '1,18';
+    input.value = '1.18';
     input.dispatchEvent(new InputEvent('input'));
     fixture.detectChanges();
     await fixture.whenStable();

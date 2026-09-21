@@ -147,7 +147,7 @@
       </div>
 
       <div class="mb-4 hide-mobile">
-        <app-tabs [tabs]="tabs" [(activeTab)]="activeTab" />
+        <app-tabs [tabs]="tabs()" [(activeTab)]="activeTab" />
       </div>
 
       <div class="mt-2">
@@ -194,16 +194,47 @@
           }
 
           @case ('trades') {
-            <app-trade-list
-              [roomId]="room()!.id"
-              [trades]="room()!.trades"
-              [players]="room()!.players"
-              [currency]="edition()!.currency"
-              [edition]="edition()!"
-              [currentPlayerId]="currentPlayer()?.id"
-              (acceptAction)="acceptTrade($event)"
-              (rejectAction)="rejectTrade($event)"
-            />
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm text-text-secondary">
+                  @if (pendingTradesForMe() > 0) {
+                    {{ pendingTradesForMe() }} pendiente{{ pendingTradesForMe() > 1 ? 's' : '' }}
+                  } @else {
+                    Sin ofertas pendientes
+                  }
+                </p>
+                <app-button (clickAction)="openAction('trade')">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [attr.d]="icons['plus']"
+                      />
+                    </svg>
+                    Nuevo intercambio
+                  </span>
+                </app-button>
+              </div>
+
+              <app-trade-list
+                [roomId]="room()!.id"
+                [trades]="room()!.trades"
+                [players]="room()!.players"
+                [currency]="edition()!.currency"
+                [edition]="edition()!"
+                [currentPlayerId]="currentPlayer()?.id"
+                (acceptAction)="acceptTrade($event)"
+                (rejectAction)="rejectTrade($event)"
+              />
+            </div>
           }
 
           @case ('log') {
@@ -217,7 +248,7 @@
       </div>
     </main>
 
-    <app-bottom-nav [items]="tabs" [(activeItem)]="activeTab" />
+    <app-bottom-nav [items]="tabs()" [(activeItem)]="activeTab" />
   }
 
   <app-toast-container />

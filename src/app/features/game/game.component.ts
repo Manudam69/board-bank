@@ -39,7 +39,12 @@ import { TransferPanelComponent } from '../../shared/components/domain/transfer-
 import { LogFeedComponent } from '../../shared/components/domain/log-feed.component';
 import { mapFirebaseError } from '../../core/utils/firebase-errors';
 import { ICONS } from '../../shared/icons';
-import type { PropertyMetadata, TransactionLogEntry } from '../../core/models';
+import type {
+  PropertyMetadata,
+  TradeOffer,
+  TradeStatus,
+  TransactionLogEntry,
+} from '../../core/models';
 
 interface SuccessConfig {
   message: string;
@@ -159,15 +164,28 @@ export class GameComponent {
 
   protected readonly icons = ICONS as Record<string, string>;
 
-  readonly tabs = [
+  readonly pendingTradesForMe = computed(() => {
+    const myId = this.auth.userId();
+    const trades = this.room()?.trades;
+    if (!myId || !trades) return 0;
+    return trades.filter((t) => t.status === 'pending' && t.toPlayerId === myId).length;
+  });
+
+  readonly tabs = computed(() => [
     { id: 'me', label: 'Yo', icon: ICONS['user'] },
     { id: 'players', label: 'Jugadores', icon: ICONS['users'] },
     { id: 'properties', label: 'Propiedades', icon: ICONS['building'] },
-    { id: 'trades', label: 'Intercambios', icon: ICONS['arrow-left-right'] },
+    {
+      id: 'trades',
+      label: 'Intercambios',
+      icon: ICONS['arrow-left-right'],
+      badge: this.pendingTradesForMe(),
+    },
     { id: 'log', label: 'Historial', icon: ICONS['history'] },
-  ];
+  ]);
 
   private lastSeenLogId: string | null = null;
+  private readonly knownTrades = new Map<string, TradeStatus>();
 
   constructor() {
     effect(() => {
@@ -206,6 +224,33 @@ export class GameComponent {
           this.notifyUndoIfNeeded(entry, myId);
         } else {
           this.notifyBankActionIfNeeded(entry, myId);
+        }
+      }
+    });
+
+    effect(() => {
+      const room = this.room();
+      if (!room) {
+        this.knownTrades.clear();
+        return;
+      }
+
+      const myId = this.auth.userId() ?? undefined;
+      for (const trade of room.trades) {
+        const known = this.knownTrades.get(trade.id);
+        if (!known) {
+          this.knownTrades.set(trade.id, trade.status);
+          if (trade.status === 'pending' && trade.toPlayerId === myId) {
+            this.notifyTradeReceived(trade);
+          }
+          continue;
+        }
+
+        if (known === 'pending' && trade.status !== 'pending') {
+          this.knownTrades.set(trade.id, trade.status);
+          if (trade.fromPlayerId === myId) {
+            this.notifyTradeResolved(trade);
+          }
         }
       }
     });
@@ -615,6 +660,48 @@ export class GameComponent {
     if (!currency) return `${amount}`;
     const symbol = currency.symbol;
     return `${symbol}${amount.toLocaleString('es-ES')}`;
+  }
+
+  private notifyTradeReceived(offer: TradeOffer): void {
+    const fromName = this.playerName(offer.fromPlayerId);
+    const fromItems = this.tradeItemsSummary(offer.fromItems);
+    const toItems = this.tradeItemsSummary(offer.toItems);
+    const detail = `Te ofrece ${fromItems} · Pide ${toItems}`;
+
+    this.toastService.show('info', `${fromName} te propuso un intercambio`, detail, 10000, {
+      label: 'Ver',
+      run: () => this.activeTab.set('trades'),
+    });
+    this.soundService.play('notify');
+  }
+
+  private notifyTradeResolved(offer: TradeOffer): void {
+    const toName = this.playerName(offer.toPlayerId);
+    const detail = this.tradeItemsSummary(offer.fromItems);
+
+    if (offer.status === 'accepted') {
+      this.toastService.success(`${toName} aceptó tu intercambio`, detail);
+      this.soundService.play('success');
+    } else {
+      this.toastService.info(`${toName} rechazó tu intercambio`, detail);
+      this.soundService.play('notify');
+    }
+  }
+
+  private tradeItemsSummary(items: { cash: number; propertyIds: string[] }): string {
+    const edition = this.edition();
+    const cashText = items.cash > 0 ? this.format(items.cash) : '';
+    const propertyNames = items.propertyIds
+      .map((id) => edition?.properties.find((p) => p.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+
+    if (cashText && propertyNames) {
+      return `${cashText} + ${propertyNames}`;
+    }
+    if (cashText) return cashText;
+    if (propertyNames) return propertyNames;
+    return '—';
   }
 
   protected toggleSound(): void {

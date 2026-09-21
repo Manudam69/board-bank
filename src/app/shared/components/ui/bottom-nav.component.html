@@ -6,12 +6,16 @@
     @for (item of items(); track item.id) {
       <button
         type="button"
-        class="group flex min-h-[48px] flex-col items-center justify-center gap-1 px-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+        class="group relative flex min-h-[48px] flex-col items-center justify-center gap-1 px-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
         [class.text-text]="activeItem() === item.id"
         [class.text-text-muted]="activeItem() !== item.id"
         [class.hover:text-text]="activeItem() !== item.id"
         [attr.aria-current]="activeItem() === item.id ? 'page' : null"
-        [attr.aria-label]="item.label"
+        [attr.aria-label]="
+          item.badge
+            ? item.label + ', ' + item.badge + ' pendiente' + (item.badge > 1 ? 's' : '')
+            : item.label
+        "
         (click)="activeItem.set(item.id)"
       >
         <svg
@@ -25,6 +29,15 @@
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="item.icon" />
         </svg>
         <span class="whitespace-nowrap">{{ item.label }}</span>
+
+        @if (item.badge) {
+          <span
+            class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-negative px-1 text-[10px] font-bold leading-none text-bg"
+            aria-hidden="true"
+          >
+            {{ item.badge > 9 ? '9+' : item.badge }}
+          </span>
+        }
       </button>
     }
   </div>

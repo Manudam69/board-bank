@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    title: 'BoardBank — Crear o unirse',
+    title: 'BoardBank — Tu Monopoly, sin billetes',
     loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
   },
   {
@@ -19,12 +19,14 @@ export const routes: Routes = [
   {
     path: 'history/:roomId',
     title: 'Resumen — BoardBank',
-    loadComponent: () => import('./features/history/history.component').then((m) => m.HistoryComponent),
+    loadComponent: () =>
+      import('./features/history/history.component').then((m) => m.HistoryComponent),
   },
   {
     path: 'editions',
     title: 'Ediciones — BoardBank',
-    loadComponent: () => import('./features/editions/editions.component').then((m) => m.EditionsComponent),
+    loadComponent: () =>
+      import('./features/editions/editions.component').then((m) => m.EditionsComponent),
   },
   {
     path: '**',

@@ -1,4 +1,12 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
@@ -6,14 +14,17 @@ import { AuthService } from '../../core/services/auth.service';
 import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
 import { RoomService } from '../../core/services/room.service';
+import { SoundService } from '../../core/services/sound.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
-import { PlayerCardComponent } from '../../shared/components/domain/player-card.component';
+import { SpinnerComponent } from '../../shared/components/ui/spinner.component';
+import { SpacedCodePipe } from '../../shared/pipes/spaced-code.pipe';
+
+const MAX_PLAYERS = 8;
 
 @Component({
   selector: 'app-lobby',
-  standalone: true,
-  imports: [ButtonComponent, ConfirmDialogComponent, PlayerCardComponent],
+  imports: [ButtonComponent, ConfirmDialogComponent, SpinnerComponent, SpacedCodePipe],
   templateUrl: './lobby.component.html',
 })
 export class LobbyComponent {
@@ -24,6 +35,7 @@ export class LobbyComponent {
   private readonly roomService = inject(RoomService);
   private readonly editions = inject(EditionService);
   private readonly auth = inject(AuthService);
+  private readonly soundService = inject(SoundService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -46,6 +58,18 @@ export class LobbyComponent {
   readonly leaving = signal(false);
   readonly copied = signal(false);
   readonly confirmLeaveOpen = signal(false);
+  readonly showStartOverlay = signal(false);
+  protected readonly MAX_PLAYERS = MAX_PLAYERS;
+
+  readonly ghostSlots = computed(() => {
+    const count = this.room()?.players.length ?? 0;
+    return Math.max(0, MAX_PLAYERS - count);
+  });
+
+  readonly ghostSlotsArray = computed(() => Array.from({ length: Math.min(this.ghostSlots(), 4) }));
+
+  // Track previous player count to play a sound only when someone joins.
+  private readonly previousPlayerCount = linkedSignal(() => this.room()?.players.length ?? 0);
 
   constructor() {
     effect(() => {
@@ -57,12 +81,38 @@ export class LobbyComponent {
 
     effect(() => {
       const room = this.room();
-      if (room?.status === 'playing') {
-        this.router.navigate(['/game', room.id]);
+      if (!room) return;
+
+      const previous = this.previousPlayerCount();
+      const current = room.players.length;
+      if (previous > 0 && current > previous) {
+        this.soundService.play('notify');
+      }
+      this.previousPlayerCount.set(current);
+    });
+
+    effect(() => {
+      const room = this.room();
+      if (room?.status === 'playing' && !this.showStartOverlay()) {
+        this.soundService.play('start');
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.showStartOverlay.set(true);
+        const delay = prefersReducedMotion ? 0 : 700;
+        setTimeout(() => this.router.navigate(['/game', room.id]), delay);
       }
     });
 
     this.destroyRef.onDestroy(() => this.gameState.unsubscribe());
+  }
+
+  protected playerJoinedAtIndex(index: number): number {
+    const players = this.room()?.players;
+    if (!players) return 0;
+    return players[index]?.joinedAt ?? 0;
+  }
+
+  protected playerInitials(name: string): string {
+    return name.trim().slice(0, 2).toUpperCase() || '?';
   }
 
   protected async copyCode(): Promise<void> {

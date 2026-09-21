@@ -1,6 +1,18 @@
 import { Injectable, signal } from '@angular/core';
 
-type SoundName = 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'undo' | 'salary' | 'notify';
+type SoundName =
+  | 'transfer'
+  | 'buy'
+  | 'build'
+  | 'cashIn'
+  | 'cashOut'
+  | 'error'
+  | 'undo'
+  | 'salary'
+  | 'notify'
+  | 'click'
+  | 'success'
+  | 'start';
 
 @Injectable({
   providedIn: 'root',
@@ -22,7 +34,10 @@ export class SoundService {
   play(name: SoundName): void {
     if (!this._enabled()) return;
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      this.ctx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {
@@ -116,6 +131,38 @@ export class SoundService {
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
         osc.start(t);
         osc.stop(t + 0.24);
+        break;
+      case 'click':
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1200, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.04);
+        gain.gain.setValueAtTime(0.05, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        osc.start(t);
+        osc.stop(t + 0.06);
+        break;
+      case 'success':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, t);
+        osc.frequency.setValueAtTime(659.25, t + 0.07);
+        osc.frequency.setValueAtTime(783.99, t + 0.14);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.setValueAtTime(0.08, t + 0.14);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc.start(t);
+        osc.stop(t + 0.28);
+        break;
+      case 'start':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, t);
+        osc.frequency.setValueAtTime(554.37, t + 0.1);
+        osc.frequency.setValueAtTime(659.25, t + 0.2);
+        osc.frequency.setValueAtTime(783.99, t + 0.3);
+        gain.gain.setValueAtTime(0.1, t);
+        gain.gain.setValueAtTime(0.1, t + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        osc.start(t);
+        osc.stop(t + 0.45);
         break;
     }
   }

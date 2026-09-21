@@ -156,8 +156,9 @@ export class JoinFlowComponent {
   }
 
   protected resetName(): void {
+    const current = this.identity.name();
     this.identity.clear();
-    this.name.set('');
+    this.name.set(current);
   }
 
   protected async join(): Promise<void> {

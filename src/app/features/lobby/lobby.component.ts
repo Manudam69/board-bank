@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -31,6 +32,7 @@ const MAX_PLAYERS = 8;
 export class LobbyComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
   private readonly gameState = inject(GameStateService);
   private readonly roomService = inject(RoomService);
@@ -66,8 +68,8 @@ export class LobbyComponent {
   readonly inviteUrl = computed(() => {
     const id = this.room()?.id;
     if (!id) return '';
-    const base = document.baseURI.replace(/\/$/, '');
-    return `${base}/join/${id}`;
+    // prepareExternalUrl applies the app's configured base href (e.g. /board-bank/ on GitHub Pages).
+    return `${location.origin}${this.location.prepareExternalUrl(`/join/${id}`)}`;
   });
 
   readonly canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';

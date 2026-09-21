@@ -1,5 +1,11 @@
 import { Component, computed, inject, input, output } from '@angular/core';
-import type { CurrencyConfig, Edition, Player, PropertyMetadata, TransactionLogEntry } from '../../../core/models';
+import type {
+  CurrencyConfig,
+  Edition,
+  Player,
+  PropertyMetadata,
+  TransactionLogEntry,
+} from '../../../core/models';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { PropertyRowComponent } from './property-row.component';
 import { EmptyStateComponent } from '../ui/empty-state.component';
@@ -16,9 +22,12 @@ export class PlayerDashboardComponent {
   private readonly formatter = inject(MoneyFormatService);
 
   readonly me = input.required<Player>();
+  readonly players = input.required<Player[]>();
   readonly edition = input.required<Edition>();
   readonly currency = input.required<CurrencyConfig>();
   readonly log = input.required<TransactionLogEntry[]>();
+
+  protected readonly others = computed(() => this.players().filter((p) => p.id !== this.me().id));
 
   readonly salaryAction = output<void>();
   readonly taxAction = output<'income' | 'luxury'>();
@@ -27,10 +36,11 @@ export class PlayerDashboardComponent {
 
   protected readonly icons = ICONS as Record<string, string>;
 
-  protected initials = computed(() => {
-    const name = this.me().name.trim();
-    return name.slice(0, 2).toUpperCase();
-  });
+  protected myInitials = computed(() => this.initials(this.me().name));
+
+  protected initials(name: string): string {
+    return name.trim().slice(0, 2).toUpperCase();
+  }
 
   protected netWorth = computed(() => {
     const cash = this.me().cash;
@@ -41,9 +51,13 @@ export class PlayerDashboardComponent {
     return cash + propertiesValue;
   });
 
-  protected formattedNetWorth = computed(() => this.formatter.format(this.netWorth(), this.currency()));
+  protected formattedNetWorth = computed(() =>
+    this.formatter.format(this.netWorth(), this.currency()),
+  );
 
-  protected mortgagesCount = computed(() => this.me().properties.filter((pp) => pp.mortgaged).length);
+  protected mortgagesCount = computed(
+    () => this.me().properties.filter((pp) => pp.mortgaged).length,
+  );
 
   protected moneyReceived = computed(() => {
     const me = this.me().id;
@@ -54,7 +68,9 @@ export class PlayerDashboardComponent {
     }, 0);
   });
 
-  protected formattedReceived = computed(() => this.formatter.format(this.moneyReceived(), this.currency()));
+  protected formattedReceived = computed(() =>
+    this.formatter.format(this.moneyReceived(), this.currency()),
+  );
 
   protected moneySpent = computed(() => {
     const me = this.me().id;
@@ -65,11 +81,13 @@ export class PlayerDashboardComponent {
     }, 0);
   });
 
-  protected formattedSpent = computed(() => this.formatter.format(this.moneySpent(), this.currency()));
+  protected formattedSpent = computed(() =>
+    this.formatter.format(this.moneySpent(), this.currency()),
+  );
 
   protected myProperties = computed(() =>
-    this.me().properties
-      .map((pp) => ({
+    this.me()
+      .properties.map((pp) => ({
         owned: pp,
         meta: this.edition().properties.find((p) => p.id === pp.propertyId),
       }))

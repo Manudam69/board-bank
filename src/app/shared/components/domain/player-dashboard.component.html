@@ -2,11 +2,18 @@
   <!-- Hero balance -->
   <div class="flex flex-col items-center gap-4 pt-2 text-center">
     <div class="relative">
-      <span class="flex h-20 w-20 items-center justify-center rounded-full text-xl font-bold text-white ring-4 ring-bg {{ me().avatarColor }}">
-        {{ initials() }}
+      <span
+        class="flex h-20 w-20 items-center justify-center rounded-full text-xl font-bold text-white ring-4 ring-bg {{
+          me().avatarColor
+        }}"
+      >
+        {{ myInitials() }}
       </span>
       @if (me().host) {
-        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary ring-2 ring-bg">Host</span>
+        <span
+          class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-surface-elevated px-2 py-0.5 text-xs font-medium text-text-secondary ring-2 ring-bg"
+          >Host</span
+        >
       }
     </div>
     <div>
@@ -40,6 +47,44 @@
     </div>
   </div>
 
+  <!-- Otros jugadores -->
+  @if (others().length > 0) {
+    <div class="space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="text-xs font-medium uppercase tracking-wide text-text-muted">Jugadores</h3>
+        <span class="text-xs text-text-muted">{{ others().length }}</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        @for (player of others(); track player.id) {
+          <div
+            class="relative rounded-xl border border-border bg-surface px-3 py-2"
+            [class.opacity-60]="player.bankrupt"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                [class]="player.avatarColor"
+                aria-hidden="true"
+              >
+                {{ initials(player.name) }}
+              </div>
+              <div class="min-w-0">
+                <p class="truncate text-xs font-medium text-text">{{ player.name }}</p>
+                @if (player.host) {
+                  <span class="text-[10px] text-text-muted">Host</span>
+                }
+              </div>
+            </div>
+            <div class="mt-1">
+              <app-balance [amount]="player.cash" [currency]="currency()" size="sm" />
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   <!-- Acciones -->
   <div class="space-y-1">
     <p class="px-1 text-xs font-medium uppercase tracking-wide text-text-muted">Banco</p>
@@ -51,13 +96,31 @@
       >
         <span class="inline-flex items-center gap-3 text-text">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-positive-muted">
-            <svg class="h-4 w-4 text-positive" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['circle-dollar-sign']" />
+            <svg
+              class="h-4 w-4 text-positive"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [attr.d]="icons['circle-dollar-sign']"
+              />
             </svg>
           </span>
           Cobrar sueldo
         </span>
-        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg
+          class="h-5 w-5 text-text-muted"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
         </svg>
       </button>
@@ -69,13 +132,27 @@
       >
         <span class="inline-flex items-center gap-3 text-text">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated">
-            <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <svg
+              class="h-4 w-4 text-text-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['banknote']" />
             </svg>
           </span>
           Pagar renta
         </span>
-        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg
+          class="h-5 w-5 text-text-muted"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
         </svg>
       </button>
@@ -87,13 +164,31 @@
       >
         <span class="inline-flex items-center gap-3 text-text">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated">
-            <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['circle-dollar-sign']" />
+            <svg
+              class="h-4 w-4 text-text-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [attr.d]="icons['circle-dollar-sign']"
+              />
             </svg>
           </span>
           Pagar lujo
         </span>
-        <svg class="h-5 w-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg
+          class="h-5 w-5 text-text-muted"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
         </svg>
       </button>
@@ -103,15 +198,33 @@
         class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-danger-muted/30 focus:outline-none"
         (click)="bankruptcyAction.emit()"
       >
-          <span class="inline-flex items-center gap-3 text-negative">
+        <span class="inline-flex items-center gap-3 text-negative">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-danger-muted">
-            <svg class="h-4 w-4 text-negative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['alert-triangle']" />
+            <svg
+              class="h-4 w-4 text-negative"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [attr.d]="icons['alert-triangle']"
+              />
             </svg>
           </span>
           Declarar quiebra
         </span>
-        <svg class="h-5 w-5 text-negative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg
+          class="h-5 w-5 text-negative"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
         </svg>
       </button>

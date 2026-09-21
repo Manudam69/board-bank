@@ -13,7 +13,10 @@ import { RoomService } from '../../core/services/room.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SoundService } from '../../core/services/sound.service';
 import { UndoService } from '../../core/services/undo.service';
-import { BankActionsBarComponent, type BankAction } from '../../shared/components/domain/bank-actions-bar.component';
+import {
+  BankActionsBarComponent,
+  type BankAction,
+} from '../../shared/components/domain/bank-actions-bar.component';
 import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
 import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
@@ -44,12 +47,7 @@ interface SuccessConfig {
   sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'salary' | 'notify';
 }
 
-type BankActionMeta =
-  | 'salary'
-  | 'income-tax'
-  | 'luxury-tax'
-  | 'bankruptcy'
-  | undefined;
+type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | undefined;
 
 @Component({
   selector: 'app-game',
@@ -136,7 +134,9 @@ export class GameComponent {
   readonly selectedPropertyOwner = computed(() => {
     const property = this.selectedProperty();
     if (!property) return undefined;
-    return this.room()?.players.find((p) => p.properties.some((pp) => pp.propertyId === property.id));
+    return this.room()?.players.find((p) =>
+      p.properties.some((pp) => pp.propertyId === property.id),
+    );
   });
 
   readonly selectedPropertyOwned = computed(() => {
@@ -144,6 +144,17 @@ export class GameComponent {
     if (!property) return false;
     const owner = this.selectedPropertyOwner();
     return !!owner?.properties.find((pp) => pp.propertyId === property.id);
+  });
+
+  readonly propertyRows = computed(() => {
+    const properties = this.edition()?.properties;
+    const players = this.room()?.players;
+    if (!properties || !players) return [];
+    return properties.map((property) => {
+      const owner = players.find((p) => p.properties.some((pp) => pp.propertyId === property.id));
+      const owned = owner?.properties.find((pp) => pp.propertyId === property.id) ?? null;
+      return { property, owned, ownerName: owner?.name ?? '' };
+    });
   });
 
   protected readonly icons = ICONS as Record<string, string>;
@@ -210,7 +221,11 @@ export class GameComponent {
     this.activeAction.set(null);
   }
 
-  private async runOp(op: () => Promise<void>, success?: SuccessConfig, undoable = false): Promise<void> {
+  private async runOp(
+    op: () => Promise<void>,
+    success?: SuccessConfig,
+    undoable = false,
+  ): Promise<void> {
     this.busy.set(true);
     try {
       await op();
@@ -254,7 +269,10 @@ export class GameComponent {
   protected onTransfer(data: { toId: string | 'bank'; amount: number; reason: string }): void {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
-    const toName = data.toId === 'bank' ? 'el Banco' : this.room()?.players.find((p) => p.id === data.toId)?.name ?? 'otro jugador';
+    const toName =
+      data.toId === 'bank'
+        ? 'el Banco'
+        : (this.room()?.players.find((p) => p.id === data.toId)?.name ?? 'otro jugador');
     if (!roomId) return;
     this.runOp(
       () => this.bank.transfer(roomId, me, data.toId, data.amount, data.reason),
@@ -287,17 +305,11 @@ export class GameComponent {
     const owner = room?.players.find((player) =>
       player.properties.some((pp) => pp.propertyId === data.propertyId),
     );
-    const propertyName = this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
+    const propertyName =
+      this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !owner) return;
     this.runOp(
-      () =>
-        this.bank.transfer(
-          roomId,
-          me,
-          owner.id,
-          data.amount,
-          `Alquiler de ${propertyName}`,
-        ),
+      () => this.bank.transfer(roomId, me, owner.id, data.amount, `Alquiler de ${propertyName}`),
       {
         message: 'Alquiler pagado',
         detail: `${this.format(data.amount)} a ${owner.name}`,
@@ -333,32 +345,39 @@ export class GameComponent {
     );
   }
 
-  protected onBuild(data: { propertyId: string; mode: 'house' | 'hotel' | 'sell-house' | 'sell-hotel' }): void {
+  protected onBuild(data: {
+    propertyId: string;
+    mode: 'house' | 'hotel' | 'sell-house' | 'sell-hotel';
+  }): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
     const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
-    this.runOp(async () => {
-      switch (data.mode) {
-        case 'house':
-          await this.properties.buildHouses(roomId, edition, me, data.propertyId, 1);
-          break;
-        case 'hotel':
-          await this.properties.buildHotel(roomId, edition, me, data.propertyId);
-          break;
-        case 'sell-house':
-          await this.properties.sellHouses(roomId, edition, me, data.propertyId, 1);
-          break;
-        case 'sell-hotel':
-          await this.properties.sellHotel(roomId, edition, me, data.propertyId);
-          break;
-      }
-    }, {
-      message: data.mode.startsWith('sell') ? 'Edificio vendido' : 'Construcción realizada',
-      detail: propertyName,
-      sound: 'build',
-    }, true);
+    this.runOp(
+      async () => {
+        switch (data.mode) {
+          case 'house':
+            await this.properties.buildHouses(roomId, edition, me, data.propertyId, 1);
+            break;
+          case 'hotel':
+            await this.properties.buildHotel(roomId, edition, me, data.propertyId);
+            break;
+          case 'sell-house':
+            await this.properties.sellHouses(roomId, edition, me, data.propertyId, 1);
+            break;
+          case 'sell-hotel':
+            await this.properties.sellHotel(roomId, edition, me, data.propertyId);
+            break;
+        }
+      },
+      {
+        message: data.mode.startsWith('sell') ? 'Edificio vendido' : 'Construcción realizada',
+        detail: propertyName,
+        sound: 'build',
+      },
+      true,
+    );
   }
 
   protected onBankSalary(): void {
@@ -367,7 +386,10 @@ export class GameComponent {
     const me = this.requireCurrentPlayer();
     if (!roomId || !edition) return;
     this.runOp(
-      () => this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida', { bankAction: 'salary' }),
+      () =>
+        this.bank.payFromBank(roomId, me, edition.goSalary, 'Sueldo por salida', {
+          bankAction: 'salary',
+        }),
       { message: 'Sueldo cobrado', detail: this.format(edition.goSalary), sound: 'salary' },
       true,
     );
@@ -398,10 +420,11 @@ export class GameComponent {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
     if (!roomId) return;
-    this.runOp(
-      () => this.bank.declareBankruptcy(roomId, me),
-      { message: 'Bancarrota declarada', detail: 'Estás fuera de la partida', sound: 'error' },
-    );
+    this.runOp(() => this.bank.declareBankruptcy(roomId, me), {
+      message: 'Bancarrota declarada',
+      detail: 'Estás fuera de la partida',
+      sound: 'error',
+    });
   }
 
   protected onProposeTrade(data: {
@@ -431,10 +454,11 @@ export class GameComponent {
   protected acceptTrade(offerId: string): void {
     const roomId = this.roomId();
     if (!roomId) return;
-    this.runOp(
-      () => this.tradeService.accept(roomId, offerId),
-      { message: 'Intercambio aceptado', detail: 'La propiedad y dinero se han transferido', sound: 'transfer' },
-    );
+    this.runOp(() => this.tradeService.accept(roomId, offerId), {
+      message: 'Intercambio aceptado',
+      detail: 'La propiedad y dinero se han transferido',
+      sound: 'transfer',
+    });
   }
 
   protected rejectTrade(offerId: string): void {
@@ -558,19 +582,28 @@ export class GameComponent {
 
     switch (action) {
       case 'salary': {
-        this.toastService.info(`${this.playerName(actorId)} cobró el sueldo`, this.format(entry.amount));
+        this.toastService.info(
+          `${this.playerName(actorId)} cobró el sueldo`,
+          this.format(entry.amount),
+        );
         this.soundService.play('notify');
         break;
       }
       case 'income-tax':
       case 'luxury-tax': {
         const taxLabel = action === 'income-tax' ? 'Impuesto sobre la renta' : 'Impuesto de lujo';
-        this.toastService.info(`${this.playerName(actorId)} pagó ${taxLabel.toLowerCase()}`, `-${this.format(entry.amount)}`);
+        this.toastService.info(
+          `${this.playerName(actorId)} pagó ${taxLabel.toLowerCase()}`,
+          `-${this.format(entry.amount)}`,
+        );
         this.soundService.play('notify');
         break;
       }
       case 'bankruptcy': {
-        this.toastService.info(`${this.playerName(actorId)} se declaró en quiebra`, 'Queda fuera de la partida');
+        this.toastService.info(
+          `${this.playerName(actorId)} se declaró en quiebra`,
+          'Queda fuera de la partida',
+        );
         this.soundService.play('notify');
         break;
       }

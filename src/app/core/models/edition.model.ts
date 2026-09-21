@@ -1,7 +1,9 @@
+export type CurrencyScale = 'units' | 'thousands' | 'millions' | 'billions' | 'trillions';
+
 export interface CurrencyConfig {
   symbol: string;
   code: string;
-  scale: 'units' | 'thousands' | 'millions';
+  scale: CurrencyScale;
 }
 
 export interface PropertyMetadata {

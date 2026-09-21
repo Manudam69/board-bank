@@ -257,7 +257,7 @@
 <app-modal
   [open]="activeAction() === 'transfer'"
   title="Transferir dinero"
-  size="sm"
+  size="md"
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
@@ -265,6 +265,7 @@
       [me]="currentPlayer()!"
       [players]="room()!.players"
       [currency]="edition()!.currency"
+      [edition]="edition()!"
       (transferAction)="onTransfer($event)"
     />
   }

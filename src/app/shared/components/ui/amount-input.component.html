@@ -1,31 +1,67 @@
-<div class="space-y-1">
-  <label class="block text-sm font-medium text-text-secondary">{{ label() }}</label>
-  <div class="flex items-center gap-2">
-    <button
-      type="button"
-      class="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-text-secondary hover:bg-surface-hover disabled:opacity-50"
-      [disabled]="disabled()"
-      (click)="adjust(-step())"
-      aria-label="Disminuir"
-    >-</button>
+<div class="space-y-2">
+  <label class="block text-sm font-medium text-text-secondary" [attr.for]="'amount-' + label()">
+    {{ label() }}
+  </label>
+
+  <div class="relative flex items-stretch">
     <input
-      type="number"
-      [min]="min()"
-      [max]="max()"
-      [step]="step()"
-      [value]="amount()"
+      [id]="'amount-' + label()"
+      type="text"
+      inputmode="decimal"
+      [value]="rawText()"
       [placeholder]="placeholder()"
       [disabled]="disabled()"
-      class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-center text-text focus:border-accent focus:outline-none"
+      class="w-full min-w-0 rounded-l-xl border-y border-l border-border bg-surface-elevated px-4 py-3 text-right text-2xl font-semibold tabular-nums text-text placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-3xl"
       (input)="onInput($any($event).target.value)"
+      (keydown)="onKeydown($event)"
     />
-    <button
-      type="button"
-      class="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-text-secondary hover:bg-surface-hover disabled:opacity-50"
-      [disabled]="disabled()"
-      (click)="adjust(step())"
-      aria-label="Aumentar"
-    >+</button>
+    <div class="flex items-center rounded-r-xl border-y border-r border-border bg-surface-elevated px-3 text-text-secondary">
+      <span class="text-sm font-semibold uppercase">{{ selectedStep().label }}</span>
+    </div>
   </div>
-  <p class="text-xs text-text-muted">Vista previa: <span class="font-medium text-text">{{ preview() }}</span></p>
+
+  @if (stepInfo().steps.length > 1) {
+    <div
+      class="flex flex-wrap gap-2"
+      role="radiogroup"
+      [attr.aria-label]="'Unidad de ' + label()"
+    >
+      @for (step of stepInfo().steps; track step.id) {
+        <button
+          type="button"
+          role="radio"
+          class="min-w-[3rem] rounded-lg border px-3 py-2 text-sm font-semibold transition focus:outline-none"
+          [class.border-accent]="selectedStep().id === step.id"
+          [class.bg-accent-muted]="selectedStep().id === step.id"
+          [class.text-text]="selectedStep().id === step.id"
+          [class.border-border]="selectedStep().id !== step.id"
+          [class.bg-surface-elevated]="selectedStep().id !== step.id"
+          [class.text-text-secondary]="selectedStep().id !== step.id"
+          [class.hover:bg-surface-hover]="selectedStep().id !== step.id"
+          [attr.aria-checked]="selectedStep().id === step.id"
+          (click)="selectStep(step)"
+        >
+          {{ step.label }}
+        </button>
+      }
+    </div>
+  }
+
+  <div class="flex min-h-[1.75rem] items-center justify-between gap-3">
+    <p
+      class="text-lg font-semibold tabular-nums transition-colors"
+      [class.text-text]="!exceedsMax() && hasValue()"
+      [class.text-text-muted]="!hasValue()"
+      [class.text-negative]="exceedsMax()"
+      aria-live="polite"
+    >
+      @if (hasValue()) {
+        <span class="text-text-muted" aria-hidden="true">≈</span>
+      }
+      {{ preview() }}
+    </p>
+    @if (exceedsMax()) {
+      <span class="text-xs font-medium text-negative">No tienes suficiente dinero</span>
+    }
+  </div>
 </div>

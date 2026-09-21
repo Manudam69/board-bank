@@ -1,31 +1,62 @@
 <div class="space-y-5">
-  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
-    Ofertante: <span class="font-semibold text-text">{{ me().name }}</span>
+  <div class="space-y-2">
+    <p class="text-sm font-medium text-text-secondary">Ofertante</p>
+    <div class="rounded-xl border border-border bg-surface-elevated/50 p-3">
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+          [style.background-color]="me().avatarColor"
+        >
+          {{ me().name.charAt(0).toUpperCase() }}
+        </span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-text">{{ me().name }}</p>
+          <p class="text-xs text-text-secondary">{{ me().cash | money: currency() }}</p>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="space-y-1">
-    <label class="block text-sm font-medium text-text-secondary" for="to">Receptor del intercambio</label>
-    <div class="relative">
-      <select
-        id="to"
-        class="w-full appearance-none rounded-lg border border-border bg-surface-elevated px-3 py-2.5 pr-10 text-text focus:border-accent focus:outline-none"
-        [(ngModel)]="toId"
-      >
-        <option [ngValue]="undefined" disabled selected>Selecciona jugador</option>
-        @for (p of eligibleTo(); track p.id) {
-          <option [ngValue]="p.id">{{ p.name }}</option>
-        }
-      </select>
-      <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-      </svg>
+  <div class="space-y-2">
+    <p class="text-sm font-medium text-text-secondary">Receptor del intercambio</p>
+    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Receptor">
+      @for (p of eligibleTo(); track p.id) {
+        <button
+          type="button"
+          role="radio"
+          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
+          [class.border-accent]="toId() === p.id"
+          [class.bg-accent-muted]="toId() === p.id"
+          [class.text-text]="toId() === p.id"
+          [class.border-border]="toId() !== p.id"
+          [class.bg-surface-elevated]="toId() !== p.id"
+          [class.text-text-secondary]="toId() !== p.id"
+          [class.hover:bg-surface-hover]="toId() !== p.id"
+          [attr.aria-checked]="toId() === p.id"
+          (click)="selectTo(p.id)"
+        >
+          <span
+            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+            [style.background-color]="p.avatarColor"
+          >
+            {{ p.name.charAt(0).toUpperCase() }}
+          </span>
+          <span class="truncate max-w-[8rem]">{{ p.name }}</span>
+        </button>
+      }
     </div>
   </div>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
     <div class="rounded-xl border border-border bg-surface p-4">
       <h4 class="mb-3 text-sm font-semibold text-text">Tú das</h4>
-      <app-amount-input [(amount)]="fromCash" [currency]="currency()" label="Dinero" [max]="me().cash" />
+      <app-amount-input
+        [(amount)]="fromCash"
+        [edition]="edition()"
+        [currency]="currency()"
+        label="Dinero"
+        [max]="me().cash"
+      />
       <div class="mt-3">
         <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
         <div class="grid grid-cols-1 gap-2">
@@ -53,7 +84,12 @@
 
     <div class="rounded-xl border border-border bg-surface p-4">
       <h4 class="mb-3 text-sm font-semibold text-text">Recibes</h4>
-      <app-amount-input [(amount)]="toCash" [currency]="currency()" label="Dinero" />
+      <app-amount-input
+        [(amount)]="toCash"
+        [edition]="edition()"
+        [currency]="currency()"
+        label="Dinero"
+      />
       <div class="mt-3">
         <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
         <div class="grid grid-cols-1 gap-2">

@@ -1,13 +1,12 @@
-import { Component, computed, input, model, output } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, input, model, output, signal } from '@angular/core';
 import type { CurrencyConfig, Edition, Player, PropertyMetadata } from '../../../core/models';
 import { AmountInputComponent } from '../ui/amount-input.component';
 import { ButtonComponent } from '../ui/button.component';
+import { MoneyPipe } from '../../pipes/money.pipe';
 
 @Component({
   selector: 'app-trade-builder',
-  standalone: true,
-  imports: [FormsModule, AmountInputComponent, ButtonComponent],
+  imports: [AmountInputComponent, ButtonComponent, MoneyPipe],
   templateUrl: './trade-builder.component.html',
 })
 export class TradeBuilderComponent {
@@ -23,7 +22,7 @@ export class TradeBuilderComponent {
     toProperties: string[];
   }>();
 
-  protected toId = model<string | undefined>(undefined);
+  protected toId = signal<string | undefined>(undefined);
   protected fromCash = model(0);
   protected toCash = model(0);
   protected fromProperties = model<Set<string>>(new Set());
@@ -58,6 +57,11 @@ export class TradeBuilderComponent {
     if (toPlayer.cash < this.toCash()) return false;
     return this.fromCash() >= 0 && this.toCash() >= 0;
   });
+
+  protected selectTo(id: string): void {
+    this.toId.set(id);
+    this.toProperties.set(new Set());
+  }
 
   protected toggleFrom(propertyId: string): void {
     const set = new Set(this.fromProperties());

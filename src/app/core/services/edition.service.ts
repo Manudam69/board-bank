@@ -11,7 +11,13 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { type Edition, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE } from '../constants/editions';
+import {
+  type Edition,
+  CLASSIC_SPAIN,
+  CLASSIC_USA,
+  MILLIONAIRE,
+  ELECTRONIC_BANKING,
+} from '../constants/editions';
 import { FirebaseInitService } from './firebase-init.service';
 import { IdService } from './id.service';
 
@@ -35,11 +41,11 @@ export class EditionService {
       q,
       (snapshot) => {
         const custom = snapshot.docs.map((d) => ({ ...(d.data() as Edition) }));
-        this.editions.set([CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom]);
+        this.editions.set([ELECTRONIC_BANKING, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom]);
         this.loading.set(false);
       },
       () => {
-        this.editions.set([CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE]);
+        this.editions.set([ELECTRONIC_BANKING, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE,]);
         this.loading.set(false);
       },
     );
@@ -71,6 +77,6 @@ export class EditionService {
     const q = query(collection(this.db, this.customCol), orderBy('name'));
     const snap = await getDocs(q);
     const custom = snap.docs.map((d) => d.data() as Edition);
-    return [CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom];
+    return [ELECTRONIC_BANKING, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom];
   }
 }

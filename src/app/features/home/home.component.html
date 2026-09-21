@@ -1,6 +1,6 @@
 <app-home-background />
 
-<header class="absolute left-0 right-0 top-0 z-50 bg-bg/70 backdrop-blur-md">
+<header class="absolute left-0 right-0 top-0 z-50 bg-bg/95">
   <nav
     class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4"
     aria-label="Navegación principal"
@@ -25,7 +25,14 @@
         [attr.aria-pressed]="soundEnabled()"
         (click)="toggleSound()"
       >
-        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="volumeIcon()" />
         </svg>
       </button>
@@ -66,13 +73,13 @@
   title="Crear partida"
   (closeAction)="showCreateModal.set(false)"
 >
-  <app-create-flow />
+  @if (showCreateModal()) {
+    <app-create-flow />
+  }
 </app-modal>
 
-<app-modal
-  [open]="showJoinModal()"
-  title="Unirse a partida"
-  (closeAction)="closeJoin()"
->
-  <app-join-flow />
+<app-modal [open]="showJoinModal()" title="Unirse a partida" (closeAction)="closeJoin()">
+  @if (showJoinModal()) {
+    <app-join-flow />
+  }
 </app-modal>

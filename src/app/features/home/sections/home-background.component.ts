@@ -5,7 +5,7 @@ import { Component } from '@angular/core';
   template: `
     <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
       <svg
-        class="absolute left-[5%] top-[12%] h-24 w-24 text-text opacity-[0.04] blur-[2px] animate-float-slow"
+        class="absolute left-[5%] top-[12%] h-24 w-24 text-text opacity-[0.04] animate-float-slow"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -20,7 +20,7 @@ import { Component } from '@angular/core';
       </svg>
 
       <svg
-        class="absolute right-[-5%] top-[20%] h-40 w-40 text-text opacity-[0.03] blur-[1px] animate-float-reverse"
+        class="absolute right-[-5%] top-[20%] h-40 w-40 text-text opacity-[0.03] animate-float-reverse"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -31,7 +31,7 @@ import { Component } from '@angular/core';
       </svg>
 
       <svg
-        class="absolute bottom-[25%] left-[-3%] h-32 w-32 text-accent opacity-[0.04] blur-[2px] animate-float"
+        class="absolute bottom-[25%] left-[-3%] h-32 w-32 text-accent opacity-[0.04] animate-float"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -42,7 +42,7 @@ import { Component } from '@angular/core';
       </svg>
 
       <svg
-        class="absolute bottom-[15%] right-[8%] h-28 w-28 text-positive opacity-[0.03] blur-[1px] animate-float-slow"
+        class="absolute bottom-[15%] right-[8%] h-28 w-28 text-positive opacity-[0.03] animate-float-slow"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -53,7 +53,7 @@ import { Component } from '@angular/core';
       </svg>
 
       <svg
-        class="absolute left-[40%] top-[45%] h-20 w-20 text-text opacity-[0.02] blur-[3px] animate-float-reverse"
+        class="absolute left-[40%] top-[45%] h-20 w-20 text-text opacity-[0.02] animate-float-reverse"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

@@ -1,11 +1,4 @@
-import {
-  Component,
-  ElementRef,
-  Injector,
-  afterRenderEffect,
-  input,
-  output,
-} from '@angular/core';
+import { Component, ElementRef, Injector, afterRenderEffect, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-modal',
@@ -29,8 +22,12 @@ export class ModalComponent {
       () => {
         if (this.open()) {
           this.previousActiveElement = document.activeElement;
-          const dialog = this.elementRef.nativeElement.querySelector('[role="dialog"]') as HTMLElement | null;
-          const closeButton = dialog?.querySelector('button[aria-label="Cerrar"]') as HTMLElement | null;
+          const dialog = this.elementRef.nativeElement.querySelector(
+            '[role="dialog"]',
+          ) as HTMLElement | null;
+          const closeButton = dialog?.querySelector(
+            'button[aria-label="Cerrar"]',
+          ) as HTMLElement | null;
           (closeButton ?? dialog)?.focus();
           document.body.classList.add('overflow-hidden');
         } else {
@@ -55,7 +52,7 @@ export class ModalComponent {
   }
 
   protected backdropClasses(): string {
-    return 'fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4';
+    return 'fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4';
   }
 
   protected close(): void {
@@ -70,4 +67,3 @@ export class ModalComponent {
     }
   }
 }
-

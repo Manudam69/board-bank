@@ -3,7 +3,9 @@
     {{ label() }}
   </label>
 
-  <div class="relative flex items-stretch">
+  <div
+    class="relative flex items-stretch overflow-hidden rounded-xl border border-border bg-surface-elevated transition-colors focus-within:border-accent"
+  >
     <input
       [id]="'amount-' + label()"
       type="text"
@@ -11,21 +13,19 @@
       [value]="rawText()"
       [placeholder]="placeholder()"
       [disabled]="disabled()"
-      class="w-full min-w-0 rounded-l-xl border-y border-l border-border bg-surface-elevated px-4 py-3 text-right text-2xl font-semibold tabular-nums text-text placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-3xl"
+      class="w-full min-w-0 border-0 bg-transparent px-4 py-3 text-right text-2xl font-semibold tabular-nums text-text placeholder:text-text-muted outline-none focus:outline-none focus-visible:outline-none sm:text-3xl"
       (input)="onInput($any($event).target.value)"
       (keydown)="onKeydown($event)"
     />
-    <div class="flex items-center rounded-r-xl border-y border-r border-border bg-surface-elevated px-3 text-text-secondary">
+    <div
+      class="flex items-center border-l border-border bg-surface-elevated px-3 text-text-secondary"
+    >
       <span class="text-sm font-semibold uppercase">{{ selectedStep().label }}</span>
     </div>
   </div>
 
   @if (stepInfo().steps.length > 1) {
-    <div
-      class="flex flex-wrap gap-2"
-      role="radiogroup"
-      [attr.aria-label]="'Unidad de ' + label()"
-    >
+    <div class="flex flex-wrap gap-2" role="radiogroup" [attr.aria-label]="'Unidad de ' + label()">
       @for (step of stepInfo().steps; track step.id) {
         <button
           type="button"

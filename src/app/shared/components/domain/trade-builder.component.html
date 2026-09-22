@@ -60,20 +60,26 @@
       <div class="mt-3">
         <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
         <div class="grid grid-cols-1 gap-2">
-          @for (property of myPropertiesList(); track property.id) {
+          @for (property of myPropertiesList(); track property.meta.id) {
             <button
               type="button"
               class="rounded-lg border px-3 py-2 text-left text-sm transition"
-              [class.border-accent]="fromProperties().has(property.id)"
-              [class.bg-accent-muted]="fromProperties().has(property.id)"
-              [class.text-text]="fromProperties().has(property.id)"
-              [class.border-border]="!fromProperties().has(property.id)"
-              [class.bg-surface-elevated]="!fromProperties().has(property.id)"
-              [class.text-text-secondary]="!fromProperties().has(property.id)"
-              [class.hover:bg-surface-hover]="!fromProperties().has(property.id)"
-              (click)="toggleFrom(property.id)"
+              [class.border-accent]="!property.hasBuildings && fromProperties().has(property.meta.id)"
+              [class.bg-accent-muted]="!property.hasBuildings && fromProperties().has(property.meta.id)"
+              [class.text-text]="!property.hasBuildings && fromProperties().has(property.meta.id)"
+              [class.border-border]="!fromProperties().has(property.meta.id)"
+              [class.bg-surface-elevated]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [class.bg-surface-elevated/50]="property.hasBuildings"
+              [class.text-text-secondary]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [class.text-text-muted]="property.hasBuildings"
+              [class.opacity-60]="property.hasBuildings"
+              [class.cursor-not-allowed]="property.hasBuildings"
+              [class.hover:bg-surface-hover]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [attr.aria-disabled]="property.hasBuildings"
+              [attr.title]="property.hasBuildings ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.' : null"
+              (click)="toggleFrom(property)"
             >
-              {{ property.name }}
+              {{ property.meta.name }}
             </button>
           } @empty {
             <p class="text-sm text-text-muted">No tienes propiedades disponibles.</p>
@@ -93,20 +99,26 @@
       <div class="mt-3">
         <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
         <div class="grid grid-cols-1 gap-2">
-          @for (property of toPropertiesList(); track property.id) {
+          @for (property of toPropertiesList(); track property.meta.id) {
             <button
               type="button"
               class="rounded-lg border px-3 py-2 text-left text-sm transition"
-              [class.border-accent]="toProperties().has(property.id)"
-              [class.bg-accent-muted]="toProperties().has(property.id)"
-              [class.text-text]="toProperties().has(property.id)"
-              [class.border-border]="!toProperties().has(property.id)"
-              [class.bg-surface-elevated]="!toProperties().has(property.id)"
-              [class.text-text-secondary]="!toProperties().has(property.id)"
-              [class.hover:bg-surface-hover]="!toProperties().has(property.id)"
-              (click)="toggleTo(property.id)"
+              [class.border-accent]="!property.hasBuildings && toProperties().has(property.meta.id)"
+              [class.bg-accent-muted]="!property.hasBuildings && toProperties().has(property.meta.id)"
+              [class.text-text]="!property.hasBuildings && toProperties().has(property.meta.id)"
+              [class.border-border]="!toProperties().has(property.meta.id)"
+              [class.bg-surface-elevated]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [class.bg-surface-elevated/50]="property.hasBuildings"
+              [class.text-text-secondary]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [class.text-text-muted]="property.hasBuildings"
+              [class.opacity-60]="property.hasBuildings"
+              [class.cursor-not-allowed]="property.hasBuildings"
+              [class.hover:bg-surface-hover]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [attr.aria-disabled]="property.hasBuildings"
+              [attr.title]="property.hasBuildings ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.' : null"
+              (click)="toggleTo(property)"
             >
-              {{ property.name }}
+              {{ property.meta.name }}
             </button>
           } @empty {
             <p class="text-sm text-text-muted">El receptor no tiene propiedades disponibles.</p>

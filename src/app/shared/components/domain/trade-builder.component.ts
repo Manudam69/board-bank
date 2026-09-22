@@ -1,8 +1,13 @@
 import { Component, computed, input, model, output, signal } from '@angular/core';
-import type { CurrencyConfig, Edition, Player, PropertyMetadata } from '../../../core/models';
+import type { CurrencyConfig, Edition, Player, PlayerProperty, PropertyMetadata } from '../../../core/models';
 import { AmountInputComponent } from '../ui/amount-input.component';
 import { ButtonComponent } from '../ui/button.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
+
+interface TradePropertyOption {
+  readonly meta: PropertyMetadata;
+  readonly hasBuildings: boolean;
+}
 
 @Component({
   selector: 'app-trade-builder',
@@ -32,20 +37,14 @@ export class TradeBuilderComponent {
     this.players().filter((p) => p.id !== this.me().id && !p.bankrupt),
   );
 
-  protected myPropertiesList = computed(() =>
-    this.me().properties
-      .map((pp) => this.edition().properties.find((p) => p.id === pp.propertyId))
-      .filter((p): p is PropertyMetadata => !!p),
-  );
+  protected myPropertiesList = computed(() => this.buildPropertyOptions(this.me().properties));
 
   protected toPropertiesList = computed(() => {
     const id = this.toId();
     if (!id) return [];
     const player = this.players().find((p) => p.id === id);
     if (!player) return [];
-    return player.properties
-      .map((pp) => this.edition().properties.find((p) => p.id === pp.propertyId))
-      .filter((p): p is PropertyMetadata => !!p);
+    return this.buildPropertyOptions(player.properties);
   });
 
   protected canSubmit = computed(() => {
@@ -63,14 +62,18 @@ export class TradeBuilderComponent {
     this.toProperties.set(new Set());
   }
 
-  protected toggleFrom(propertyId: string): void {
+  protected toggleFrom(option: TradePropertyOption): void {
+    if (option.hasBuildings) return;
+    const propertyId = option.meta.id;
     const set = new Set(this.fromProperties());
     if (set.has(propertyId)) set.delete(propertyId);
     else set.add(propertyId);
     this.fromProperties.set(set);
   }
 
-  protected toggleTo(propertyId: string): void {
+  protected toggleTo(option: TradePropertyOption): void {
+    if (option.hasBuildings) return;
+    const propertyId = option.meta.id;
     const set = new Set(this.toProperties());
     if (set.has(propertyId)) set.delete(propertyId);
     else set.add(propertyId);
@@ -92,5 +95,18 @@ export class TradeBuilderComponent {
     this.fromProperties.set(new Set());
     this.toProperties.set(new Set());
     this.toId.set(undefined);
+  }
+
+  private buildPropertyOptions(properties: PlayerProperty[]): TradePropertyOption[] {
+    return properties
+      .map((pp) => {
+        const meta = this.edition().properties.find((p) => p.id === pp.propertyId);
+        if (!meta) return null;
+        return {
+          meta,
+          hasBuildings: pp.houses > 0 || pp.hasHotel,
+        };
+      })
+      .filter((option): option is TradePropertyOption => !!option);
   }
 }

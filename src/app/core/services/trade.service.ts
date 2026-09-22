@@ -21,6 +21,15 @@ export class TradeService {
     return items.flatMap((i) => i.propertyIds);
   }
 
+  private assertPropertiesHaveNoBuildings(player: Player, propertyIds: string[]): void {
+    for (const propertyId of propertyIds) {
+      const pp = player.properties.find((p) => p.propertyId === propertyId);
+      if (pp && (pp.houses > 0 || pp.hasHotel)) {
+        throw new Error('No puedes intercambiar una propiedad con edificaciones. Vende las edificaciones al Banco primero.');
+      }
+    }
+  }
+
   create(
     roomId: string,
     fromPlayerId: string,
@@ -36,6 +45,11 @@ export class TradeService {
     }
 
     return this.gameState.runInTransaction(roomId, (room) => {
+      const from = this.requirePlayer(room, fromPlayerId);
+      const to = this.requirePlayer(room, toPlayerId);
+      this.assertPropertiesHaveNoBuildings(from, fromItems.propertyIds);
+      this.assertPropertiesHaveNoBuildings(to, toItems.propertyIds);
+
       const offer: TradeOffer = {
         id: this.id.newId(),
         status: 'pending',
@@ -77,6 +91,9 @@ export class TradeService {
           throw new Error(`${to.name} no posee una propiedad de la oferta`);
         }
       }
+
+      this.assertPropertiesHaveNoBuildings(from, offer.fromItems.propertyIds);
+      this.assertPropertiesHaveNoBuildings(to, offer.toItems.propertyIds);
 
       const players = room.players.map((p) => {
         if (p.id === from.id) {

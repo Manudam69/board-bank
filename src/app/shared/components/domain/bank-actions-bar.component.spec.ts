@@ -37,6 +37,13 @@ describe('BankActionsBarComponent', () => {
     expect(transferButton).toBeTruthy();
     transferButton!.click();
     expect(emittedActions).toContain('transfer');
+
+    const bankPaymentButton = Array.from(quickButtons).find((b) =>
+      (b as HTMLElement).textContent?.includes('Pagar del Banco'),
+    ) as HTMLElement | undefined;
+    expect(bankPaymentButton).toBeTruthy();
+    bankPaymentButton!.click();
+    expect(emittedActions).toContain('bank-payment');
   });
 
   it('opens the more menu and emits extra actions', () => {

@@ -110,6 +110,41 @@ export class BankService {
     return this.transfer(roomId, 'bank', playerId, amount, description, metadata);
   }
 
+  bankPayTo(
+    roomId: string,
+    toPlayerId: string,
+    amount: number,
+    description: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<void> {
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      throw new Error('La cantidad debe ser un número entero mayor que cero');
+    }
+
+    const actorId = this.auth.userId();
+    if (!actorId) throw new Error('No estás autenticado');
+
+    return this.gameState.runInTransaction(roomId, (room) => {
+      const to = this.requirePlayer(room, toPlayerId);
+
+      const players = room.players.map((p) =>
+        p.id === to.id ? { ...p, cash: p.cash + amount } : p,
+      );
+
+      const log = this.buildLog(
+        'bank-payment',
+        amount,
+        description || 'Pago del Banco',
+        'bank',
+        toPlayerId,
+        undefined,
+        { ...(metadata ?? {}), bankAction: 'bank-payment', actorId },
+      );
+
+      return { ...room, players, log: [...room.log, log] };
+    });
+  }
+
   declareBankruptcy(roomId: string, playerId: string): Promise<void> {
     this.ensureActor(playerId);
     return this.gameState.runInTransaction(roomId, (room) => {

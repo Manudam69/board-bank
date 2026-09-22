@@ -1,0 +1,140 @@
+<div class="space-y-5">
+  <div class="flex items-center gap-3">
+    <div class="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-3">
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+          style="background-color: #64748b"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['banknote']" />
+          </svg>
+        </span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-text">Banco</p>
+          <p class="text-xs text-text-secondary">Fondos ilimitados</p>
+        </div>
+      </div>
+    </div>
+
+    <svg
+      class="h-5 w-5 shrink-0 text-text-muted"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['arrow-down']" />
+    </svg>
+
+    <div class="flex-1 rounded-xl border border-dashed border-border bg-surface-elevated/30 p-3">
+      <p class="text-xs font-medium text-text-secondary">Destino</p>
+      <p class="truncate text-sm font-semibold text-text">
+        @if (selectedTo(); as to) {
+          {{ to.name }}
+        } @else {
+          <span class="text-text-muted">Selecciona jugador</span>
+        }
+      </p>
+    </div>
+  </div>
+
+  <div class="space-y-2">
+    <p class="text-sm font-medium text-text-secondary">Jugador</p>
+    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Jugador que recibe">
+      @for (target of eligibleTo(); track target.id) {
+        <button
+          type="button"
+          role="radio"
+          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
+          [class.border-accent]="toId() === target.id"
+          [class.bg-accent-muted]="toId() === target.id"
+          [class.text-text]="toId() === target.id"
+          [class.border-border]="toId() !== target.id"
+          [class.bg-surface-elevated]="toId() !== target.id"
+          [class.text-text-secondary]="toId() !== target.id"
+          [class.hover:bg-surface-hover]="toId() !== target.id"
+          [attr.aria-checked]="toId() === target.id"
+          (click)="selectTo(target.id)"
+        >
+          <span
+            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+            [style.background-color]="target.avatarColor"
+          >
+            {{ target.name.charAt(0).toUpperCase() }}
+          </span>
+          <span class="truncate max-w-[8rem]">{{ target.name }}</span>
+        </button>
+      } @empty {
+        <p class="text-sm text-text-muted">No hay jugadores disponibles.</p>
+      }
+    </div>
+  </div>
+
+  <app-amount-input
+    [(amount)]="amount"
+    [edition]="edition()"
+    [currency]="currency()"
+    label="Cantidad"
+  />
+
+  @if (amountChips().length > 0) {
+    <div class="space-y-1.5">
+      <p class="text-sm font-medium text-text-secondary">Atajos de la edición</p>
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Cantidades rápidas">
+        @for (value of amountChips(); track value) {
+          <button
+            type="button"
+            class="rounded-lg border px-3 py-1.5 text-sm font-medium transition"
+            [class.border-accent]="amount() === value"
+            [class.bg-accent-muted]="amount() === value"
+            [class.text-text]="amount() === value"
+            [class.border-border]="amount() !== value"
+            [class.bg-surface-elevated]="amount() !== value"
+            [class.text-text-secondary]="amount() !== value"
+            [class.hover:bg-surface-hover]="amount() !== value"
+            [attr.aria-pressed]="amount() === value"
+            (click)="toggleAmountChip(value)"
+          >
+            {{ formatter.format(value, currency()) }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  @if (amount() > 0 && selectedTo(); as to) {
+    <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm">
+      <p class="text-text-secondary">
+        {{ to.name }} recibe
+        <span class="font-semibold text-text">{{ formatter.formatExact(amount(), currency()) }}</span>
+      </p>
+      <p class="mt-1 text-text-secondary">
+        Saldo final:
+        <span class="font-semibold text-text">{{ formatter.formatExact(finalBalance(), currency()) }}</span>
+      </p>
+    </div>
+  } @else if (amount() > 0) {
+    <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm text-text-secondary">
+      Total a pagar:
+      <span class="font-semibold text-text">{{ formatter.formatExact(amount(), currency()) }}</span>
+    </div>
+  }
+
+  <div class="space-y-1">
+    <label class="block text-sm font-medium text-text-secondary" for="bank-pay-reason">Motivo (opcional)</label>
+    <input
+      id="bank-pay-reason"
+      type="text"
+      class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+      placeholder="Ej. premio de tarjeta, bono, corrección..."
+      [value]="reason()"
+      (input)="onReasonInput($any($event).target.value)"
+    />
+  </div>
+
+  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
+    Confirmar pago
+  </app-button>
+</div>

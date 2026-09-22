@@ -9,6 +9,7 @@ export type TransactionType =
   | 'salary'
   | 'tax'
   | 'bank-fee'
+  | 'bank-payment'
   | 'trade'
   | 'bankruptcy'
   | 'game-end'

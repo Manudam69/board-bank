@@ -162,4 +162,71 @@ describe('BankService guards', () => {
     expect(savedRoom?.status).toBe('lobby');
     expect(savedRoom?.finishedAt).toBeUndefined();
   });
+
+  describe('bankPayTo', () => {
+    it('adds cash to the recipient and logs a bank-payment entry', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.bankPayTo('ROOM', 'u2', 500, 'Premio del Banco');
+
+      const u2 = savedRoom?.players.find((p) => p.id === 'u2');
+      expect(u2?.cash).toBe(1500);
+      const log = savedRoom?.log.at(-1);
+      expect(log).toMatchObject({
+        type: 'bank-payment',
+        amount: 500,
+        description: 'Premio del Banco',
+        fromPlayerId: 'bank',
+        toPlayerId: 'u2',
+        metadata: { bankAction: 'bank-payment', actorId: 'u1' },
+      });
+    });
+
+    it('uses a default description when none is provided', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.bankPayTo('ROOM', 'u2', 300, '');
+      expect(savedRoom?.log.at(-1)?.description).toBe('Pago del Banco');
+    });
+
+    it('rejects non-positive or non-integer amounts', () => {
+      expect(() => service.bankPayTo('ROOM', 'u2', 0, 'X')).toThrow('La cantidad debe ser un número entero mayor que cero');
+      expect(() => service.bankPayTo('ROOM', 'u2', -100, 'X')).toThrow('La cantidad debe ser un número entero mayor que cero');
+      expect(() => service.bankPayTo('ROOM', 'u2', 1.5, 'X')).toThrow('La cantidad debe ser un número entero mayor que cero');
+    });
+
+    it('rejects paying an unknown player', () => {
+      return expect(service.bankPayTo('ROOM', 'u99', 100, 'X')).rejects.toThrow('Jugador no encontrado');
+    });
+
+    it('rejects paying a bankrupt player', () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: true, host: false, joinedAt: 0 },
+          ],
+        };
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      return expect(service.bankPayTo('ROOM', 'u2', 100, 'X')).rejects.toThrow('El jugador está en quiebra');
+    });
+  });
 });

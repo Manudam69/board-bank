@@ -306,6 +306,22 @@
 </app-modal>
 
 <app-modal
+  [open]="activeAction() === 'bank-payment'"
+  title="Pagar desde el Banco"
+  size="md"
+  (closeAction)="closeAction()"
+>
+  @if (room() && edition() && currentPlayer()) {
+    <app-bank-pay-panel
+      [players]="room()!.players"
+      [currency]="edition()!.currency"
+      [edition]="edition()!"
+      (payAction)="onBankPay($event)"
+    />
+  }
+</app-modal>
+
+<app-modal
   [open]="activeAction() === 'mortgage'"
   title="Hipotecar propiedad"
   size="lg"

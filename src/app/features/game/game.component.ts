@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BankService } from '../../core/services/bank.service';
 import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
+import { MoneyFormatService } from '../../core/services/money-format.service';
 import { PropertyService } from '../../core/services/property.service';
 import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
@@ -17,6 +18,7 @@ import {
   BankActionsBarComponent,
   type BankAction,
 } from '../../shared/components/domain/bank-actions-bar.component';
+import { BankPayPanelComponent } from '../../shared/components/domain/bank-pay-panel.component';
 import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
 import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
@@ -52,7 +54,7 @@ interface SuccessConfig {
   sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'salary' | 'notify';
 }
 
-type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | undefined;
+type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | 'bank-payment' | undefined;
 
 @Component({
   selector: 'app-game',
@@ -74,6 +76,7 @@ type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | un
     TradeBuilderComponent,
     TradeListComponent,
     TransferPanelComponent,
+    BankPayPanelComponent,
     BuyPropertyPanelComponent,
     RentPanelComponent,
     MortgagePanelComponent,
@@ -97,6 +100,7 @@ export class GameComponent {
   private readonly toastService = inject(ToastService);
   protected readonly soundService = inject(SoundService);
   private readonly undoService = inject(UndoService);
+  private readonly moneyFormatter = inject(MoneyFormatService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -453,6 +457,20 @@ export class GameComponent {
     );
   }
 
+  protected onBankPay(data: { toId: string; amount: number; reason: string }): void {
+    const roomId = this.roomId();
+    if (!roomId) return;
+    const toName = this.room()?.players.find((p) => p.id === data.toId)?.name ?? '';
+    this.runOp(
+      () => this.bank.bankPayTo(roomId, data.toId, data.amount, data.reason),
+      {
+        message: 'Pago del Banco enviado',
+        detail: `${toName} recibió ${this.formatScaled(data.amount)}`,
+        sound: 'transfer',
+      },
+    );
+  }
+
   protected promptBankruptcy(): void {
     this.confirmBankruptcyOpen.set(true);
   }
@@ -645,6 +663,25 @@ export class GameComponent {
         this.soundService.play('notify');
         break;
       }
+      case 'bank-payment': {
+        const actorIdMeta = entry.metadata?.['actorId'] as string | undefined;
+        const recipientId = entry.toPlayerId;
+        if (recipientId === myId && actorIdMeta !== myId) {
+          const toPlayer = this.room()?.players.find((p) => p.id === recipientId);
+          this.toastService.success(
+            `Recibiste ${this.formatScaled(entry.amount)} del Banco`,
+            `${entry.description} · Saldo: ${this.formatExact(toPlayer?.cash ?? entry.amount)}`,
+          );
+          this.soundService.play('cashIn');
+        } else if (actorIdMeta !== myId && recipientId && recipientId !== myId) {
+          this.toastService.info(
+            `${this.playerName(recipientId)} recibió un pago del Banco`,
+            this.formatScaled(entry.amount),
+          );
+          this.soundService.play('notify');
+        }
+        break;
+      }
     }
   }
 
@@ -653,6 +690,18 @@ export class GameComponent {
     if (!currency) return `${amount}`;
     const symbol = currency.symbol;
     return `${symbol}${amount.toLocaleString('es-ES')}`;
+  }
+
+  private formatScaled(amount: number): string {
+    const currency = this.edition()?.currency;
+    if (!currency) return `${amount}`;
+    return this.moneyFormatter.format(amount, currency);
+  }
+
+  private formatExact(amount: number): string {
+    const currency = this.edition()?.currency;
+    if (!currency) return `${amount}`;
+    return this.moneyFormatter.formatExact(amount, currency);
   }
 
   private notifyTradeReceived(offer: TradeOffer): void {

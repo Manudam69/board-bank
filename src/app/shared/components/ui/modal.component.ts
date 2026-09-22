@@ -1,4 +1,11 @@
-import { Component, ElementRef, Injector, afterRenderEffect, input, output } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterRenderEffect,
+  input,
+  output,
+} from '@angular/core';
 
 @Component({
   selector: 'app-modal',
@@ -29,9 +36,9 @@ export class ModalComponent {
             'button[aria-label="Cerrar"]',
           ) as HTMLElement | null;
           (closeButton ?? dialog)?.focus();
-          document.body.classList.add('overflow-hidden');
+          this.syncBodyScrollLock();
         } else {
-          document.body.classList.remove('overflow-hidden');
+          this.syncBodyScrollLock();
           if (this.previousActiveElement instanceof HTMLElement) {
             this.previousActiveElement.focus();
           }
@@ -39,6 +46,15 @@ export class ModalComponent {
       },
       { injector: this.injector },
     );
+  }
+
+  ngOnDestroy(): void {
+    queueMicrotask(() => this.syncBodyScrollLock());
+  }
+
+  private syncBodyScrollLock(): void {
+    const hasOpenDialog = document.querySelector('[role="dialog"]') !== null;
+    document.body.classList.toggle('overflow-hidden', hasOpenDialog);
   }
 
   protected dialogClasses(): string {

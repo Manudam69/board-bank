@@ -115,6 +115,13 @@ export class LobbyComponent {
       }
     });
 
+    effect(() => {
+      const room = this.room();
+      if (room?.status === 'finished') {
+        this.router.navigate(['/history', room.id]);
+      }
+    });
+
     this.destroyRef.onDestroy(() => this.gameState.unsubscribe());
   }
 

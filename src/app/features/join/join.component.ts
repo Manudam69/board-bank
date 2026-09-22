@@ -184,7 +184,9 @@ export class JoinComponent {
       const isPlayer = room.players.some((p) => p.id === uid);
 
       if (isPlayer) {
-        if (room.status === 'playing') {
+        if (room.status === 'finished') {
+          this.router.navigate(['/history', room.id]);
+        } else if (room.status === 'playing') {
           this.router.navigate(['/game', room.id]);
         } else {
           this.router.navigate(['/lobby', room.id]);
@@ -192,8 +194,13 @@ export class JoinComponent {
         return;
       }
 
+      if (room.status === 'finished') {
+        this.fail('La partida ya ha terminado.');
+        return;
+      }
+
       if (room.status !== 'lobby') {
-        this.fail('La partida ya ha comenzado o ha terminado.');
+        this.fail('La partida ya ha comenzado.');
         return;
       }
 

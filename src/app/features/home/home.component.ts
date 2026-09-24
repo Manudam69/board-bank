@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
+import { ActiveRoomService } from '../../core/services/active-room.service';
 import { SoundService } from '../../core/services/sound.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { LogoComponent } from '../../shared/components/ui/logo.component';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
 import { SpinnerComponent } from '../../shared/components/ui/spinner.component';
+import { RejoinBannerComponent } from '../../shared/components/domain/rejoin-banner.component';
 import { ICONS } from '../../shared/icons';
 import { CreateFlowComponent } from './flows/create-flow.component';
 import { JoinFlowComponent } from './flows/join-flow.component';
@@ -29,11 +31,13 @@ import { SocialSectionComponent } from './sections/social-section.component';
     SiteFooterComponent,
     CreateFlowComponent,
     JoinFlowComponent,
+    RejoinBannerComponent,
   ],
   templateUrl: './home.component.html',
 })
 export class HomeComponent {
   private readonly auth = inject(AuthService);
+  private readonly activeRoom = inject(ActiveRoomService);
   protected readonly soundService = inject(SoundService);
 
   readonly authReady = this.auth.ready;
@@ -41,11 +45,20 @@ export class HomeComponent {
   readonly showCreateModal = signal(false);
   readonly showJoinModal = signal(false);
   readonly soundEnabled = this.soundService.enabled;
+  readonly activeRoomData = this.activeRoom.activeRoom;
   protected readonly ICONS = ICONS;
 
   protected readonly volumeIcon = computed(() =>
     this.soundEnabled() ? ICONS['volume2'] : ICONS['volumeX'],
   );
+
+  constructor() {
+    effect(() => {
+      if (this.authReady()) {
+        this.activeRoom.check();
+      }
+    });
+  }
 
   protected openCreate(): void {
     this.showCreateModal.set(true);
@@ -61,5 +74,13 @@ export class HomeComponent {
 
   protected toggleSound(): void {
     this.soundService.toggle();
+  }
+
+  protected dismissRejoin(): void {
+    const room = this.activeRoomData();
+    if (room) {
+      this.activeRoom.clear(room.id);
+    }
+    this.activeRoom.activeRoom.set(null);
   }
 }

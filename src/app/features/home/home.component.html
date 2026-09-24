@@ -60,6 +60,12 @@
       <app-spinner label="Conectando con Firebase..." />
     </div>
   } @else {
+    @if (activeRoomData(); as room) {
+      <div class="mx-auto max-w-4xl px-4 pt-20">
+        <app-rejoin-banner [room]="room" (dismissAction)="dismissRejoin()" />
+      </div>
+    }
+
     <app-hero (createAction)="openCreate()" (joinAction)="openJoin()" />
     <app-how-it-works />
     <app-product-preview />

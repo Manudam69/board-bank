@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { doc, onSnapshot, runTransaction, updateDoc, type Unsubscribe } from 'firebase/firestore';
+import { ActiveRoomService } from './active-room.service';
 import { FirebaseInitService } from './firebase-init.service';
 import { cleanFirestoreData } from '../utils/clean-firestore-data';
 import type { Room } from '../models';
@@ -9,9 +10,11 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private readonly firebase = inject(FirebaseInitService);
+  private readonly activeRoom = inject(ActiveRoomService);
   private readonly db = this.firebase.db;
   private unsub?: Unsubscribe;
   private heartbeatTimer?: ReturnType<typeof setInterval>;
+  private subscribedRoomId?: string;
 
   readonly room = signal<Room | null>(null);
   readonly loading = signal(false);
@@ -24,15 +27,21 @@ export class GameStateService {
     this.loading.set(true);
     this.error.set(null);
     this.connected.set(false);
+    this.subscribedRoomId = roomId;
 
     const ref = doc(this.db, 'rooms', roomId);
     this.unsub = onSnapshot(
       ref,
       (snapshot) => {
         if (snapshot.exists()) {
-          this.room.set(snapshot.data() as Room);
+          const room = snapshot.data() as Room;
+          if (room.status === 'finished') {
+            this.activeRoom.clear(roomId);
+          }
+          this.room.set(room);
         } else {
           this.error.set('La sala ya no existe.');
+          this.activeRoom.clear(roomId);
           this.room.set(null);
         }
         this.loading.set(false);

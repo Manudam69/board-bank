@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
+import { ActiveRoomService } from './active-room.service';
 import { FirebaseInitService } from './firebase-init.service';
 import { IdService } from './id.service';
 import { AuthService } from './auth.service';
@@ -13,6 +14,7 @@ export class RoomService {
   private readonly id = inject(IdService);
   private readonly auth = inject(AuthService);
   private readonly gameState = inject(GameStateService);
+  private readonly activeRoom = inject(ActiveRoomService);
   private readonly db = this.firebase.db;
 
   private roomsCol() {
@@ -58,6 +60,7 @@ export class RoomService {
     };
 
     await setDoc(doc(this.db, this.roomsCol(), roomId), room);
+    this.activeRoom.record(roomId);
     return room;
   }
 
@@ -73,6 +76,7 @@ export class RoomService {
     const uid = this.currentUid();
     const existing = room.players.find((p) => p.id === uid);
     if (existing) {
+      this.activeRoom.record(room.id);
       return room;
     }
 
@@ -101,6 +105,7 @@ export class RoomService {
     const updatedPlayers = [...room.players, newPlayer];
     const now = Date.now();
     await updateDoc(roomRef, { players: updatedPlayers, updatedAt: now });
+    this.activeRoom.record(room.id);
 
     return { ...room, players: updatedPlayers, updatedAt: now };
   }
@@ -153,6 +158,7 @@ export class RoomService {
       hostId: remaining[0].id,
       updatedAt: Date.now(),
     });
+    this.activeRoom.clear(roomId);
   }
 
   async finishGame(
@@ -189,6 +195,7 @@ export class RoomService {
         log: [...room.log, entry],
       };
     });
+    this.activeRoom.clear(roomId);
   }
 
   private pickColor(index: number): string {

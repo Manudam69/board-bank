@@ -5,7 +5,7 @@ import { GameStateService } from './game-state.service';
 import { IdService } from './id.service';
 
 export interface BuildKindMetadata {
-  buildKind: 'house' | 'hotel';
+  buildKind: 'house' | 'hotel' | 'rearrange';
   count?: number;
 }
 
@@ -15,7 +15,8 @@ export type UndoableType =
   | 'mortgage'
   | 'unmortgage'
   | 'build-houses'
-  | 'sell-houses';
+  | 'sell-houses'
+  | 'rearrange-houses';
 
 const UNDOABLE_TYPES = new Set<UndoableType>([
   'transfer',
@@ -24,6 +25,7 @@ const UNDOABLE_TYPES = new Set<UndoableType>([
   'unmortgage',
   'build-houses',
   'sell-houses',
+  'rearrange-houses',
 ]);
 
 @Injectable({ providedIn: 'root' })
@@ -88,6 +90,7 @@ export class UndoService {
       case 'sell-houses':
         return entry.toPlayerId === userId;
       case 'build-houses':
+      case 'rearrange-houses':
         return entry.fromPlayerId === userId;
       default:
         return false;
@@ -148,9 +151,49 @@ export class UndoService {
       case 'build-houses':
       case 'sell-houses':
         return this.applyBuildOrSellInverse(room, entry, userId);
+      case 'rearrange-houses':
+        return this.applyRearrangeInverse(room, entry, userId);
       default:
         throw new Error('Tipo de operación no deshechible');
     }
+  }
+
+  private applyRearrangeInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
+    const playerId = entry.fromPlayerId;
+    if (!playerId || playerId === 'bank') throw new Error('Autor no válido');
+
+    const player = this.requirePlayer(room, playerId);
+    const meta = entry.metadata as { before?: { propertyId: string; houses: number; hasHotel: boolean }[] } | undefined;
+    const before = meta?.before;
+    if (!before || before.length === 0) throw new Error('Falta la distribución anterior');
+
+    // Verificar que el estado actual coincide con el "after" guardado.
+    const after = entry.metadata?.['after'] as { propertyId: string; houses: number }[] | undefined;
+    for (const item of before) {
+      const pp = this.requireOwnProperty(player, item.propertyId);
+      const expectedAfter = after?.find((a) => a.propertyId === item.propertyId)?.houses;
+      if (pp.houses !== expectedAfter) {
+        throw new Error('La distribución actual no coincide con la reorganización deshecha');
+      }
+    }
+
+    const players = room.players.map((p) =>
+      p.id === playerId
+        ? {
+            ...p,
+            properties: p.properties.map((x) => {
+              const target = before.find((b) => b.propertyId === x.propertyId);
+              return target ? { ...x, houses: target.houses, hasHotel: target.hasHotel } : x;
+            }),
+          }
+        : p,
+    );
+
+    return {
+      ...room,
+      players,
+      log: [...this.markUndone(room.log, entry.id), this.buildUndoLog(entry, userId)],
+    };
   }
 
   private applyTransferInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {

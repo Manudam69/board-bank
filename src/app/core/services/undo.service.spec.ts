@@ -275,6 +275,38 @@ describe('UndoService', () => {
     await expect(service.undoLast('ROOM')).rejects.toThrow('ya no tiene suficiente dinero');
   });
 
+  it('reverses a house rearrangement', async () => {
+    lastRoom = makeRoom();
+    addProperty(lastRoom, 'u1', 'p1', { houses: 1 });
+    addProperty(lastRoom, 'u1', 'p2', { houses: 2 });
+    lastRoom.log.push(
+      makeEntry({
+        type: 'rearrange-houses',
+        fromPlayerId: 'u1',
+        amount: 0,
+        description: 'Reorganización',
+        propertyIds: ['p1', 'p2'],
+        metadata: {
+          buildKind: 'rearrange',
+          before: [
+            { propertyId: 'p1', houses: 2, hasHotel: false },
+            { propertyId: 'p2', houses: 1, hasHotel: false },
+          ],
+          after: [
+            { propertyId: 'p1', houses: 1, hasHotel: false },
+            { propertyId: 'p2', houses: 2, hasHotel: false },
+          ],
+        },
+      }),
+    );
+
+    await service.undoLast('ROOM');
+
+    expect(lastRoom!.players[0].properties.find((p) => p.propertyId === 'p1')!.houses).toBe(2);
+    expect(lastRoom!.players[0].properties.find((p) => p.propertyId === 'p2')!.houses).toBe(1);
+    expect(lastRoom!.log[lastRoom!.log.length - 1].type).toBe('undo');
+  });
+
   it('does not undo unsupported types (e.g. bankruptcy)', async () => {
     lastRoom = makeRoom();
     lastRoom.log.push(makeEntry({ type: 'bankruptcy', fromPlayerId: 'u1', toPlayerId: 'bank', amount: 0, description: 'Quiebra' }));

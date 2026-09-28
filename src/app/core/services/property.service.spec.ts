@@ -4,6 +4,7 @@ import { PropertyService } from './property.service';
 import { GameStateService } from './game-state.service';
 import { AuthService } from './auth.service';
 import { IdService } from './id.service';
+import { BuildingRulesService } from './building-rules.service';
 import { CLASSIC_SPAIN } from '../constants/editions';
 import type { PlayerProperty, Room } from '../models';
 
@@ -43,6 +44,7 @@ describe('PropertyService guards', () => {
       providers: [
         PropertyService,
         IdService,
+        BuildingRulesService,
         { provide: GameStateService, useValue: { runInTransaction: runInTransactionMock } },
         { provide: AuthService, useValue: auth },
       ],
@@ -77,5 +79,109 @@ describe('PropertyService guards', () => {
     expect(() => service.mortgage('ROOM', CLASSIC_SPAIN, 'u2', p1.id)).toThrow(
       'No puedes gestionar las propiedades de otro jugador',
     );
+  });
+
+  describe('building rules', () => {
+    const p2 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p2')!;
+
+    it('rejects building when it would break even-build rule', async () => {
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 1, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 0, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+
+      await expect(service.buildHouses('ROOM', CLASSIC_SPAIN, 'u1', p1.id, 1)).rejects.toThrow('construcción uniforme');
+    });
+
+    it('allows building on the lowest property', async () => {
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 1, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 0, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+
+      await expect(service.buildHouses('ROOM', CLASSIC_SPAIN, 'u1', p2.id, 1)).resolves.toBeUndefined();
+    });
+
+    it('rejects selling when it would break even-build rule', async () => {
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 2, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 1, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+
+      await expect(service.sellHouses('ROOM', CLASSIC_SPAIN, 'u1', p2.id, 1)).rejects.toThrow('construcción uniforme');
+    });
+
+    it('requires 4 houses on every property of the group to build a hotel', async () => {
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 4, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 3, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+
+      await expect(service.buildHotel('ROOM', CLASSIC_SPAIN, 'u1', p1.id)).rejects.toThrow('todo el grupo');
+    });
+  });
+
+  describe('rearrangeHouses', () => {
+    const p2 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p2')!;
+
+    it('rearranges houses within a group for free', async () => {
+      let latestRoom: Room | undefined;
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 2, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 1, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        latestRoom = room;
+      });
+
+      await service.rearrangeHouses('ROOM', CLASSIC_SPAIN, 'u1', { [p1.id]: 1, [p2.id]: 2 });
+
+      const updated = latestRoom!;
+      const pp1 = updated.players[0].properties.find((p) => p.propertyId === p1.id)!;
+      const pp2 = updated.players[0].properties.find((p) => p.propertyId === p2.id)!;
+      expect(pp1.houses).toBe(1);
+      expect(pp2.houses).toBe(2);
+      expect(updated.players[0].cash).toBe(500);
+      expect(updated.log[updated.log.length - 1].type).toBe('rearrange-houses');
+    });
+
+    it('rejects rearrangements that break the uniform rule', async () => {
+      runInTransactionMock.mockImplementation(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom([
+          { propertyId: p1.id, houses: 2, hasHotel: false, mortgaged: false },
+          { propertyId: p2.id, houses: 1, hasHotel: false, mortgaged: false },
+        ]);
+        room.players[0].cash = 500;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+
+      await expect(service.rearrangeHouses('ROOM', CLASSIC_SPAIN, 'u1', { [p1.id]: 3, [p2.id]: 0 })).rejects.toThrow(
+        'construcción uniforme',
+      );
+    });
   });
 });

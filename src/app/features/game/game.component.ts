@@ -20,7 +20,7 @@ import {
 } from '../../shared/components/domain/bank-actions-bar.component';
 import { BankPayPanelComponent } from '../../shared/components/domain/bank-pay-panel.component';
 import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-property-panel.component';
-import { BuildPanelComponent } from '../../shared/components/domain/build-panel.component';
+import { BuildManagerComponent, type BuildManagerAction } from '../../shared/components/domain/build-manager.component';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
 import { MortgagePanelComponent } from '../../shared/components/domain/mortgage-panel.component';
@@ -80,7 +80,7 @@ type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | 'b
     BuyPropertyPanelComponent,
     RentPanelComponent,
     MortgagePanelComponent,
-    BuildPanelComponent,
+    BuildManagerComponent,
     LogFeedComponent,
     BankActionsBarComponent,
   ],
@@ -134,6 +134,7 @@ export class GameComponent {
   readonly confirmLeaveOpen = signal(false);
   readonly confirmFinishOpen = signal(false);
   readonly selectedProperty = signal<PropertyMetadata | undefined>(undefined);
+  readonly buildContextPropertyId = signal<string | undefined>(undefined);
   readonly selectedPropertyActions = signal<{
     canMortgage: boolean;
     canUnmortgage: boolean;
@@ -268,17 +269,22 @@ export class GameComponent {
 
   protected closeAction(): void {
     this.activeAction.set(null);
+    this.buildContextPropertyId.set(undefined);
   }
 
   private async runOp(
     op: () => Promise<void>,
     success?: SuccessConfig,
     undoable = false,
+    keepOpen = false,
   ): Promise<void> {
     this.busy.set(true);
     try {
       await op();
-      this.activeAction.set(null);
+      if (!keepOpen) {
+        this.activeAction.set(null);
+        this.buildContextPropertyId.set(undefined);
+      }
       if (success) {
         const action = undoable
           ? { label: 'Deshacer', run: () => this.undoLastAction() }
@@ -392,39 +398,75 @@ export class GameComponent {
     );
   }
 
-  protected onBuild(data: {
-    propertyId: string;
-    mode: 'house' | 'hotel' | 'sell-house' | 'sell-hotel';
-  }): void {
+  protected onBuild(action: BuildManagerAction): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
-    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !edition) return;
+
+    const propertyName = 'propertyId' in action
+      ? edition.properties.find((p) => p.id === action.propertyId)?.name ?? ''
+      : '';
+
     this.runOp(
       async () => {
-        switch (data.mode) {
-          case 'house':
-            await this.properties.buildHouses(roomId, edition, me, data.propertyId, 1);
+        switch (action.kind) {
+          case 'build-house':
+            await this.properties.buildHouses(roomId, edition, me, action.propertyId, 1);
             break;
-          case 'hotel':
-            await this.properties.buildHotel(roomId, edition, me, data.propertyId);
+          case 'build-hotel':
+            await this.properties.buildHotel(roomId, edition, me, action.propertyId);
             break;
           case 'sell-house':
-            await this.properties.sellHouses(roomId, edition, me, data.propertyId, 1);
+            await this.properties.sellHouses(roomId, edition, me, action.propertyId, 1);
             break;
           case 'sell-hotel':
-            await this.properties.sellHotel(roomId, edition, me, data.propertyId);
+            await this.properties.sellHotel(roomId, edition, me, action.propertyId);
+            break;
+          case 'rearrange':
+            await this.properties.rearrangeHouses(roomId, edition, me, action.distribution);
             break;
         }
       },
-      {
-        message: data.mode.startsWith('sell') ? 'Edificio vendido' : 'Construcción realizada',
-        detail: propertyName,
-        sound: 'build',
-      },
+      this.buildSuccessConfig(action, propertyName),
+      true,
       true,
     );
+  }
+
+  private buildSuccessConfig(action: BuildManagerAction, propertyName: string): SuccessConfig {
+    switch (action.kind) {
+      case 'build-house':
+        return {
+          message: 'Casa construida',
+          detail: `${propertyName} ahora tiene más casas`,
+          sound: 'build',
+        };
+      case 'build-hotel':
+        return {
+          message: 'Hotel construido',
+          detail: propertyName,
+          sound: 'build',
+        };
+      case 'sell-house':
+        return {
+          message: 'Casa vendida',
+          detail: propertyName,
+          sound: 'build',
+        };
+      case 'sell-hotel':
+        return {
+          message: 'Hotel vendido',
+          detail: propertyName,
+          sound: 'build',
+        };
+      case 'rearrange':
+        return {
+          message: 'Casas reorganizadas',
+          detail: 'Distribución actualizada',
+          sound: 'build',
+        };
+    }
   }
 
   protected onBankSalary(): void {
@@ -611,6 +653,7 @@ export class GameComponent {
         this.activeAction.set('unmortgage');
         break;
       case 'build':
+        this.buildContextPropertyId.set(property.id);
         this.activeAction.set('build');
         break;
     }

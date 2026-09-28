@@ -2,6 +2,7 @@
   [attr.type]="type()"
   [class]="getClasses()"
   [disabled]="disabled() || loading()"
+  [attr.aria-label]="ariaLabel()"
   (click)="onClick($event)"
 >
   @if (loading()) {

@@ -6,6 +6,7 @@ export type TransactionType =
   | 'unmortgage'
   | 'build-houses'
   | 'sell-houses'
+  | 'rearrange-houses'
   | 'salary'
   | 'tax'
   | 'bank-fee'

@@ -357,16 +357,18 @@
 
 <app-modal
   [open]="activeAction() === 'build'"
-  title="Construir / vender edificios"
+  title="Construcciones"
   size="lg"
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    <app-build-panel
+    <app-build-manager
       [edition]="edition()!"
       [me]="currentPlayer()!"
       [currency]="edition()!.currency"
-      (buildAction)="onBuild($event)"
+      [initialPropertyId]="buildContextPropertyId()"
+      [busy]="busy()"
+      (action)="onBuild($event)"
     />
   }
 </app-modal>

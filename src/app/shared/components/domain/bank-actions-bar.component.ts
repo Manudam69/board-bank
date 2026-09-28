@@ -1,7 +1,7 @@
 import { Component, output, signal } from '@angular/core';
 import { ICONS } from '../../icons';
 
-export type BankAction = 'transfer' | 'bank-payment' | 'buy' | 'rent' | 'mortgage' | 'unmortgage' | 'build' | 'trade';
+export type BankAction = 'transfer' | 'bank-payment' | 'buy' | 'rent' | 'mortgage' | 'build' | 'trade';
 
 interface ActionItem {
   id: BankAction;
@@ -16,8 +16,7 @@ const ACTIONS: ActionItem[] = [
   { id: 'bank-payment', label: 'Pagar del Banco', icon: ICONS['circle-dollar-sign'] },
   { id: 'buy', label: 'Comprar', icon: ICONS['shopping-cart'] },
   { id: 'build', label: 'Construir', icon: ICONS['hammer'] },
-  { id: 'mortgage', label: 'Hipotecar', icon: ICONS['lock'] },
-  { id: 'unmortgage', label: 'Deshipotecar', icon: ICONS['lock-open'] },
+  { id: 'mortgage', label: 'Hipotecas', icon: ICONS['lock'] },
   { id: 'trade', label: 'Intercambiar', icon: ICONS['arrow-left-right'] },
 ];
 

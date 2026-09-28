@@ -8,7 +8,7 @@ import { BankService } from '../../core/services/bank.service';
 import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
 import { MoneyFormatService } from '../../core/services/money-format.service';
-import { PropertyService } from '../../core/services/property.service';
+import { PropertyService, unmortgageCost } from '../../core/services/property.service';
 import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -23,7 +23,7 @@ import { BuyPropertyPanelComponent } from '../../shared/components/domain/buy-pr
 import { BuildManagerComponent, type BuildManagerAction } from '../../shared/components/domain/build-manager.component';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
-import { MortgagePanelComponent } from '../../shared/components/domain/mortgage-panel.component';
+import { MortgagePanelComponent, type MortgagePanelAction } from '../../shared/components/domain/mortgage-panel.component';
 import { RentPanelComponent } from '../../shared/components/domain/rent-panel.component';
 import { SkeletonComponent } from '../../shared/components/ui/skeleton.component';
 import { TabsComponent } from '../../shared/components/ui/tabs.component';
@@ -372,30 +372,30 @@ export class GameComponent {
     );
   }
 
-  protected onMortgage(data: { propertyId: string }): void {
+  protected onMortgageAction(event: MortgagePanelAction): void {
     const roomId = this.roomId();
     const edition = this.edition();
     const me = this.requireCurrentPlayer();
-    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
-    if (!roomId || !edition) return;
-    this.runOp(
-      () => this.properties.mortgage(roomId, edition, me, data.propertyId),
-      { message: 'Hipoteca creada', detail: propertyName, sound: 'cashIn' },
-      true,
-    );
-  }
+    const meta = edition?.properties.find((p) => p.id === event.propertyId);
+    const propertyName = meta?.name ?? '';
+    if (!roomId || !edition || !meta) return;
 
-  protected onUnmortgage(data: { propertyId: string }): void {
-    const roomId = this.roomId();
-    const edition = this.edition();
-    const me = this.requireCurrentPlayer();
-    const propertyName = edition?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
-    if (!roomId || !edition) return;
-    this.runOp(
-      () => this.properties.unmortgage(roomId, edition, me, data.propertyId),
-      { message: 'Hipoteca pagada', detail: propertyName, sound: 'cashOut' },
-      true,
-    );
+    if (event.kind === 'mortgage') {
+      this.runOp(
+        () => this.properties.mortgage(roomId, edition, me, event.propertyId),
+        { message: `${propertyName} hipotecada`, detail: `+${this.formatScaled(meta.mortgageValue)}`, sound: 'cashIn' },
+        true,
+        true,
+      );
+    } else {
+      const cost = unmortgageCost(meta);
+      this.runOp(
+        () => this.properties.unmortgage(roomId, edition, me, event.propertyId),
+        { message: `${propertyName} recuperada`, detail: `−${this.formatScaled(cost)}`, sound: 'cashOut' },
+        true,
+        true,
+      );
+    }
   }
 
   protected onBuild(action: BuildManagerAction): void {
@@ -650,7 +650,7 @@ export class GameComponent {
         this.activeAction.set('mortgage');
         break;
       case 'unmortgage':
-        this.activeAction.set('unmortgage');
+        this.activeAction.set('mortgage');
         break;
       case 'build':
         this.buildContextPropertyId.set(property.id);

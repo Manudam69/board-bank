@@ -1,9 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import type { Edition, Player, PlayerProperty, Room, TransactionLogEntry } from '../models';
+import type { Edition, Player, PropertyMetadata, PlayerProperty, Room, TransactionLogEntry } from '../models';
 import { AuthService } from './auth.service';
 import { BuildingRulesService } from './building-rules.service';
 import { GameStateService } from './game-state.service';
 import { IdService } from './id.service';
+
+export const UNMORTGAGE_INTEREST_MULTIPLIER = 1.1;
+
+export function unmortgageCost(meta: PropertyMetadata): number {
+  return Math.round(meta.mortgageValue * UNMORTGAGE_INTEREST_MULTIPLIER);
+}
 
 @Injectable({ providedIn: 'root' })
 export class PropertyService {
@@ -156,7 +162,7 @@ export class PropertyService {
       if (!pp) throw new Error('No posees esa propiedad');
       if (!pp.mortgaged) throw new Error('La propiedad no está hipotecada');
 
-      const cost = Math.round(meta.mortgageValue * 1.1);
+      const cost = unmortgageCost(meta);
       if (player.cash < cost) throw new Error('Dinero insuficiente para deshipotecar');
 
       const players = room.players.map((p) =>

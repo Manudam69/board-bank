@@ -323,34 +323,17 @@
 
 <app-modal
   [open]="activeAction() === 'mortgage'"
-  title="Hipotecar propiedad"
+  title="Hipotecas"
   size="lg"
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
     <app-mortgage-panel
-      mode="mortgage"
       [edition]="edition()!"
       [me]="currentPlayer()!"
       [currency]="edition()!.currency"
-      (action)="onMortgage($event)"
-    />
-  }
-</app-modal>
-
-<app-modal
-  [open]="activeAction() === 'unmortgage'"
-  title="Deshipotecar propiedad"
-  size="lg"
-  (closeAction)="closeAction()"
->
-  @if (room() && edition() && currentPlayer()) {
-    <app-mortgage-panel
-      mode="unmortgage"
-      [edition]="edition()!"
-      [me]="currentPlayer()!"
-      [currency]="edition()!.currency"
-      (action)="onUnmortgage($event)"
+      [busy]="busy()"
+      (action)="onMortgageAction($event)"
     />
   }
 </app-modal>

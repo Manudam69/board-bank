@@ -1,32 +1,169 @@
 <div class="space-y-4">
-  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
-    Propietario: <span class="font-semibold text-text">{{ me().name }}</span>
-  </div>
-
-  @if (selected()) {
-    <div class="rounded-lg border border-warning/30 bg-warning-muted p-3 text-sm">
-      <span class="text-text-secondary">Propiedad seleccionada:</span>
-      <span class="ml-1 font-semibold text-text">{{ selected()?.name }}</span>
-      <span class="ml-2 text-text-secondary">({{ mode() === 'mortgage' ? 'hipoteca' : 'deshipoteca' }})</span>
+  <!-- Resumen superior -->
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-text">Tus propiedades</p>
+      <p class="text-xs text-text-secondary">
+        {{ summary().total }} propiedad{{ summary().total !== 1 ? 'es' : '' }}
+        <span aria-hidden="true">·</span>
+        {{ summary().mortgaged }} hipotecada{{ summary().mortgaged !== 1 ? 's' : '' }}
+      </p>
     </div>
-  }
-
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-    @for (property of candidateProperties(); track property.id) {
-      <app-property-card
-        [property]="property"
-        [edition]="edition()"
-        [owned]="me().properties.find(pp => pp.propertyId === property.id) ?? null"
-        [selectable]="true"
-        [selected]="selected()?.id === property.id"
-        (propertyClick)="onSelect(property)"
-      />
-    } @empty {
-      <p class="col-span-full text-center text-sm text-text-secondary">No hay propiedades candidatas para esta acción.</p>
-    }
+    <app-balance [amount]="me().cash" [currency]="currency()" size="md" />
   </div>
 
-  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    {{ mode() === 'mortgage' ? 'Hipotecar' : 'Deshipotecar' }}
-  </app-button>
+  <!-- Lista de propiedades -->
+  <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2" role="list">
+    @for (item of items(); track item.meta.id) {
+      <li
+        class="relative flex flex-col overflow-hidden rounded-xl border p-4 transition"
+        [class.border-warning/30]="item.mortgaged"
+        [class.bg-warning-muted/15]="item.mortgaged"
+        [class.border-border]="!item.mortgaged"
+        [class.bg-surface-elevated]="!item.mortgaged"
+      >
+        <!-- Barra de color del grupo -->
+        <div
+          class="absolute left-0 top-0 h-full w-1.5"
+          [style.background-color]="item.meta.groupColor"
+        ></div>
+
+        <!-- Cabecera: nombre + badge -->
+        <div class="flex items-start justify-between gap-3 pl-3">
+          <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-text-muted">
+              {{ item.meta.group }}
+            </p>
+            <h4 class="truncate text-base font-semibold text-text">
+              {{ item.meta.name }}
+            </h4>
+          </div>
+          @if (item.mortgaged) {
+            <span
+              class="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"
+              [class.animate-pop-in]="pulsePropertyId() === item.meta.id"
+            >
+              <svg
+                class="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+              Hipotecada
+            </span>
+          }
+        </div>
+
+        <!-- Info financiera -->
+        <div class="mt-2 flex items-center justify-between gap-2 pl-3 text-sm">
+          @if (item.kind === 'mortgage') {
+            <span class="text-text-secondary">Hipotecar por</span>
+            <span class="font-semibold text-positive">+{{ item.amount | money: currency() }}</span>
+          } @else if (item.kind === 'unmortgage') {
+            <span class="text-text-secondary">Recuperar por</span>
+            <span class="font-semibold text-negative">−{{ item.amount | money: currency() }}</span>
+          } @else {
+            <span class="text-text-secondary">Hipoteca disponible</span>
+            <span class="font-semibold text-text-muted">{{ item.amount | money: currency() }}</span>
+          }
+        </div>
+
+        <!-- Acción -->
+        @if (item.kind) {
+          <app-button
+            class="mt-3"
+            [variant]="item.kind === 'mortgage' ? 'primary' : 'soft'"
+            shape="lg"
+            size="md"
+            [fullWidth]="true"
+            [disabled]="busy() || !item.available"
+            [aria-label]="ariaLabel(item)"
+            (clickAction)="runAction(item)"
+          >
+            <span class="flex w-full items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 font-semibold">
+                @if (item.kind === 'mortgage') {
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  Hipotecar
+                } @else {
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Deshipotecar
+                }
+              </span>
+              <span class="font-semibold">
+                @if (item.kind === 'mortgage') {
+                  +{{ item.amount | money: currency() }}
+                } @else {
+                  −{{ item.amount | money: currency() }}
+                }
+              </span>
+            </span>
+          </app-button>
+        } @else {
+          <!-- Estado bloqueado sin botón -->
+          <div class="mt-3 flex items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-xs text-text-secondary">
+            <svg
+              class="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            <div>
+              <span class="font-medium text-text">No disponible</span>
+              @if (item.buildingLabel) {
+                <span class="ml-1 text-text-muted">({{ item.buildingLabel }})</span>
+              }
+              <p class="mt-0.5">{{ item.blockedReason }}</p>
+            </div>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="col-span-full rounded-xl border border-border bg-surface-elevated/50 p-6 text-center">
+        <p class="text-sm text-text-secondary">No tienes propiedades para gestionar.</p>
+      </li>
+    }
+  </ul>
 </div>

@@ -3,6 +3,7 @@ import type { CurrencyConfig, Edition, Player, PropertyMetadata } from '../../..
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { ButtonComponent } from '../ui/button.component';
 import { ICONS } from '../../icons';
+import { needsDarkGroupText } from '../../utils/property-group';
 
 export interface PropertyAction {
   id: 'buy' | 'mortgage' | 'unmortgage' | 'build' | 'trade' | 'view';
@@ -46,9 +47,7 @@ export class PropertyDetailSheetComponent {
 
   protected needsDarkText = computed(() => {
     const p = this.property();
-    if (!p) return false;
-    const color = p.groupColor.toUpperCase();
-    return color === '#FFFFFF' || color === '#FFFF00' || color === '#F1C40F' || color === '#FFEB3B';
+    return p ? needsDarkGroupText(p.groupColor) : false;
   });
 
   protected rentLevels = computed(() => {

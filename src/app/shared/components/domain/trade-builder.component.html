@@ -63,23 +63,67 @@
           @for (property of myPropertiesList(); track property.meta.id) {
             <button
               type="button"
-              class="rounded-lg border px-3 py-2 text-left text-sm transition"
-              [class.border-accent]="!property.hasBuildings && fromProperties().has(property.meta.id)"
-              [class.bg-accent-muted]="!property.hasBuildings && fromProperties().has(property.meta.id)"
+              class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition"
+              [class.border-accent]="
+                !property.hasBuildings && fromProperties().has(property.meta.id)
+              "
+              [class.bg-accent-muted]="
+                !property.hasBuildings && fromProperties().has(property.meta.id)
+              "
               [class.text-text]="!property.hasBuildings && fromProperties().has(property.meta.id)"
               [class.border-border]="!fromProperties().has(property.meta.id)"
-              [class.bg-surface-elevated]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [class.bg-surface-elevated]="
+                !property.hasBuildings && !fromProperties().has(property.meta.id)
+              "
               [class.bg-surface-elevated/50]="property.hasBuildings"
-              [class.text-text-secondary]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [class.text-text-secondary]="
+                !property.hasBuildings && !fromProperties().has(property.meta.id)
+              "
               [class.text-text-muted]="property.hasBuildings"
               [class.opacity-60]="property.hasBuildings"
               [class.cursor-not-allowed]="property.hasBuildings"
-              [class.hover:bg-surface-hover]="!property.hasBuildings && !fromProperties().has(property.meta.id)"
+              [class.hover:bg-surface-hover]="
+                !property.hasBuildings && !fromProperties().has(property.meta.id)
+              "
               [attr.aria-disabled]="property.hasBuildings"
-              [attr.title]="property.hasBuildings ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.' : null"
+              [attr.title]="
+                property.hasBuildings
+                  ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.'
+                  : null
+              "
+              [attr.aria-label]="ariaLabel(property.meta)"
               (click)="toggleFrom(property)"
             >
-              {{ property.meta.name }}
+              <app-property-group-bar [groupColor]="property.meta.groupColor" />
+              <span class="truncate">{{ property.meta.name }}</span>
+              @if (!property.hasBuildings && fromProperties().has(property.meta.id)) {
+                <svg
+                  class="ml-auto h-4 w-4 shrink-0 text-accent"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              }
+              @if (property.hasBuildings) {
+                <svg
+                  class="ml-auto h-4 w-4 shrink-0 text-text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              }
             </button>
           } @empty {
             <p class="text-sm text-text-muted">No tienes propiedades disponibles.</p>
@@ -102,23 +146,65 @@
           @for (property of toPropertiesList(); track property.meta.id) {
             <button
               type="button"
-              class="rounded-lg border px-3 py-2 text-left text-sm transition"
+              class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition"
               [class.border-accent]="!property.hasBuildings && toProperties().has(property.meta.id)"
-              [class.bg-accent-muted]="!property.hasBuildings && toProperties().has(property.meta.id)"
+              [class.bg-accent-muted]="
+                !property.hasBuildings && toProperties().has(property.meta.id)
+              "
               [class.text-text]="!property.hasBuildings && toProperties().has(property.meta.id)"
               [class.border-border]="!toProperties().has(property.meta.id)"
-              [class.bg-surface-elevated]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [class.bg-surface-elevated]="
+                !property.hasBuildings && !toProperties().has(property.meta.id)
+              "
               [class.bg-surface-elevated/50]="property.hasBuildings"
-              [class.text-text-secondary]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [class.text-text-secondary]="
+                !property.hasBuildings && !toProperties().has(property.meta.id)
+              "
               [class.text-text-muted]="property.hasBuildings"
               [class.opacity-60]="property.hasBuildings"
               [class.cursor-not-allowed]="property.hasBuildings"
-              [class.hover:bg-surface-hover]="!property.hasBuildings && !toProperties().has(property.meta.id)"
+              [class.hover:bg-surface-hover]="
+                !property.hasBuildings && !toProperties().has(property.meta.id)
+              "
               [attr.aria-disabled]="property.hasBuildings"
-              [attr.title]="property.hasBuildings ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.' : null"
+              [attr.title]="
+                property.hasBuildings
+                  ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.'
+                  : null
+              "
+              [attr.aria-label]="ariaLabel(property.meta)"
               (click)="toggleTo(property)"
             >
-              {{ property.meta.name }}
+              <app-property-group-bar [groupColor]="property.meta.groupColor" />
+              <span class="truncate">{{ property.meta.name }}</span>
+              @if (!property.hasBuildings && toProperties().has(property.meta.id)) {
+                <svg
+                  class="ml-auto h-4 w-4 shrink-0 text-accent"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              }
+              @if (property.hasBuildings) {
+                <svg
+                  class="ml-auto h-4 w-4 shrink-0 text-text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              }
             </button>
           } @empty {
             <p class="text-sm text-text-muted">El receptor no tiene propiedades disponibles.</p>

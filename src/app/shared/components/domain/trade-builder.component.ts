@@ -3,6 +3,7 @@ import type { CurrencyConfig, Edition, Player, PlayerProperty, PropertyMetadata 
 import { AmountInputComponent } from '../ui/amount-input.component';
 import { ButtonComponent } from '../ui/button.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
+import { PropertyGroupBarComponent } from '../ui/property-group-bar.component';
 
 interface TradePropertyOption {
   readonly meta: PropertyMetadata;
@@ -11,7 +12,7 @@ interface TradePropertyOption {
 
 @Component({
   selector: 'app-trade-builder',
-  imports: [AmountInputComponent, ButtonComponent, MoneyPipe],
+  imports: [AmountInputComponent, ButtonComponent, MoneyPipe, PropertyGroupBarComponent],
   templateUrl: './trade-builder.component.html',
 })
 export class TradeBuilderComponent {
@@ -95,6 +96,10 @@ export class TradeBuilderComponent {
     this.fromProperties.set(new Set());
     this.toProperties.set(new Set());
     this.toId.set(undefined);
+  }
+
+  protected ariaLabel(meta: PropertyMetadata): string {
+    return `${meta.name} · ${meta.group}`;
   }
 
   private buildPropertyOptions(properties: PlayerProperty[]): TradePropertyOption[] {

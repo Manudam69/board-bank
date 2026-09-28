@@ -4,6 +4,8 @@ import type { CurrencyConfig, Edition, Player, TradeOffer } from '../../../core/
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { ButtonComponent } from '../ui/button.component';
 
+type ResolvedTrade = TradeOffer & { status: 'accepted' | 'rejected' | 'cancelled' };
+
 @Component({
   selector: 'app-trade-list',
   standalone: true,
@@ -21,23 +23,28 @@ export class TradeListComponent {
   readonly currentPlayerId = input<string | undefined>(undefined);
   readonly acceptAction = output<string>();
   readonly rejectAction = output<string>();
+  readonly cancelAction = output<string>();
 
   private playerMap = computed(() => {
     return new Map<string, Player>(this.players().map((p) => [p.id, p]));
   });
 
+  private myTrades = computed(() => {
+    const id = this.currentPlayerId();
+    return this.trades().filter((t) => t.fromPlayerId === id || t.toPlayerId === id);
+  });
+
   protected pendingTrades = computed(() =>
-    this.trades()
-      .filter((t) => t.status === 'pending')
+    this.myTrades()
+      .filter((t): t is TradeOffer => t.status === 'pending')
       .sort((a, b) => b.createdAt - a.createdAt),
   );
 
-  protected visibleTrades = computed(() => {
-    const id = this.currentPlayerId();
-    return this.pendingTrades().filter(
-      (t) => t.fromPlayerId === id || t.toPlayerId === id,
-    );
-  });
+  protected historyTrades = computed(() =>
+    this.myTrades()
+      .filter((t): t is ResolvedTrade => t.status !== 'pending')
+      .sort((a, b) => (b.resolvedAt ?? b.createdAt) - (a.resolvedAt ?? a.createdAt)),
+  );
 
   protected format(amount: number): string {
     return this.formatter.format(amount, this.currency());
@@ -55,10 +62,14 @@ export class TradeListComponent {
   }
 
   protected canAccept(offer: TradeOffer): boolean {
-    return offer.toPlayerId === this.currentPlayerId();
+    return offer.status === 'pending' && offer.toPlayerId === this.currentPlayerId();
   }
 
   protected canReject(offer: TradeOffer): boolean {
-    return offer.toPlayerId === this.currentPlayerId();
+    return offer.status === 'pending' && offer.toPlayerId === this.currentPlayerId();
+  }
+
+  protected canCancel(offer: TradeOffer): boolean {
+    return offer.status === 'pending' && offer.fromPlayerId === this.currentPlayerId();
   }
 }

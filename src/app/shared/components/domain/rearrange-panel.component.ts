@@ -147,6 +147,7 @@ export class RearrangePanelComponent {
   protected apply(): void {
     if (!this.canApply()) return;
     this.applyAction.emit({ ...this.draftState() });
+    this.cancel();
   }
 
   protected cancel(): void {

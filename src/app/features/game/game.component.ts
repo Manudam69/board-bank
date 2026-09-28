@@ -133,6 +133,8 @@ export class GameComponent {
   readonly confirmBankruptcyOpen = signal(false);
   readonly confirmLeaveOpen = signal(false);
   readonly confirmFinishOpen = signal(false);
+  readonly confirmCancelTradeOpen = signal(false);
+  private pendingCancelTradeId: string | null = null;
   readonly selectedProperty = signal<PropertyMetadata | undefined>(undefined);
   readonly buildContextPropertyId = signal<string | undefined>(undefined);
   readonly selectedPropertyActions = signal<{
@@ -256,6 +258,8 @@ export class GameComponent {
           this.knownTrades.set(trade.id, trade.status);
           if (trade.fromPlayerId === myId) {
             this.notifyTradeResolved(trade);
+          } else if (trade.toPlayerId === myId && trade.status === 'cancelled') {
+            this.notifyTradeCancelled(trade);
           }
         }
       }
@@ -603,6 +607,28 @@ export class GameComponent {
     this.runOp(() => this.tradeService.reject(roomId, offerId));
   }
 
+  protected promptCancelTrade(offerId: string): void {
+    this.pendingCancelTradeId = offerId;
+    this.confirmCancelTradeOpen.set(true);
+  }
+
+  protected onCancelTradeConfirmed(confirmed: boolean): void {
+    this.confirmCancelTradeOpen.set(false);
+    if (!confirmed) {
+      this.pendingCancelTradeId = null;
+      return;
+    }
+    const roomId = this.roomId();
+    const offerId = this.pendingCancelTradeId;
+    this.pendingCancelTradeId = null;
+    if (!roomId || !offerId) return;
+    this.runOp(() => this.tradeService.cancel(roomId, offerId), {
+      message: 'Intercambio cancelado',
+      detail: 'La oferta ya no está disponible para el receptor',
+      sound: 'notify',
+    });
+  }
+
   protected promptFinishGame(): void {
     this.confirmFinishOpen.set(true);
   }
@@ -809,6 +835,10 @@ export class GameComponent {
   }
 
   private notifyTradeResolved(offer: TradeOffer): void {
+    if (offer.status === 'cancelled') {
+      return;
+    }
+
     const toName = this.playerName(offer.toPlayerId);
     const detail = this.tradeItemsSummary(offer.fromItems);
 
@@ -819,6 +849,13 @@ export class GameComponent {
       this.toastService.info(`${toName} rechazó tu intercambio`, detail);
       this.soundService.play('notify');
     }
+  }
+
+  private notifyTradeCancelled(offer: TradeOffer): void {
+    const fromName = this.playerName(offer.fromPlayerId);
+    const detail = this.tradeItemsSummary(offer.fromItems);
+    this.toastService.info(`${fromName} canceló su oferta de intercambio`, detail);
+    this.soundService.play('notify');
   }
 
   private tradeItemsSummary(items: { cash: number; propertyIds: string[] }): string {

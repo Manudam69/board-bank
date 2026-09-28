@@ -198,4 +198,84 @@ describe('TradeService building guard', () => {
     );
     expect(room.trades[0].status).toBe('accepted');
   });
+
+  describe('cancel', () => {
+    function makeOffer(status: TradeOffer['status'] = 'pending'): TradeOffer {
+      return {
+        id: 'OFFER',
+        status,
+        fromPlayerId: 'u1',
+        toPlayerId: 'u2',
+        fromItems: { cash: 50, propertyIds: [p1.id] },
+        toItems: { cash: 25, propertyIds: [p2.id] },
+        createdAt: 0,
+      };
+    }
+
+    it('creator can cancel a pending trade', async () => {
+      room = makeRoom({
+        u1Properties: [{ propertyId: p1.id, houses: 0, hasHotel: false, mortgaged: false }],
+        u2Properties: [{ propertyId: p2.id, houses: 0, hasHotel: false, mortgaged: false }],
+        u1Cash: 100,
+        u2Cash: 200,
+        offers: [makeOffer()],
+      });
+      currentUser = 'u1';
+
+      await service.cancel('ROOM', 'OFFER');
+
+      const cancelled = room.trades[0];
+      expect(cancelled.status).toBe('cancelled');
+      expect(cancelled.resolvedAt).toBeGreaterThan(0);
+      const u1 = room.players.find((p) => p.id === 'u1')!;
+      const u2 = room.players.find((p) => p.id === 'u2')!;
+      expect(u1.cash).toBe(100);
+      expect(u2.cash).toBe(200);
+      expect(u1.properties.map((pp) => pp.propertyId)).toEqual([p1.id]);
+      expect(u2.properties.map((pp) => pp.propertyId)).toEqual([p2.id]);
+    });
+
+    it('rejects cancelling a non-pending trade', async () => {
+      room = makeRoom({ offers: [makeOffer('accepted')] });
+      currentUser = 'u1';
+
+      await expect(service.cancel('ROOM', 'OFFER')).rejects.toThrow('La oferta ya fue resuelta');
+      expect(room.trades[0].status).toBe('accepted');
+    });
+
+    it('recipient cannot cancel the trade', async () => {
+      room = makeRoom({ offers: [makeOffer()] });
+      currentUser = 'u2';
+
+      await expect(service.cancel('ROOM', 'OFFER')).rejects.toThrow(
+        'Solo el creador puede cancelar la oferta',
+      );
+      expect(room.trades[0].status).toBe('pending');
+    });
+
+    it('accepted trade cannot be cancelled and cancelled trade cannot be accepted', async () => {
+      room = makeRoom({ offers: [makeOffer('accepted')] });
+      currentUser = 'u1';
+
+      await expect(service.cancel('ROOM', 'OFFER')).rejects.toThrow('La oferta ya fue resuelta');
+
+      room.trades[0] = makeOffer('cancelled');
+      currentUser = 'u2';
+      await expect(service.accept('ROOM', 'OFFER')).rejects.toThrow('La oferta ya fue resuelta');
+    });
+
+    it('cancelled trade cannot be rejected', async () => {
+      room = makeRoom({ offers: [makeOffer('cancelled')] });
+      currentUser = 'u2';
+
+      await expect(service.reject('ROOM', 'OFFER')).rejects.toThrow('La oferta ya fue resuelta');
+    });
+
+    it('throws when offer is missing', async () => {
+      room = makeRoom();
+      currentUser = 'u1';
+
+      await expect(service.cancel('ROOM', 'OFFER')).rejects.toThrow('Oferta no encontrada');
+    });
+  });
 });

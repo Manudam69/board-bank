@@ -1,42 +1,167 @@
-<div class="space-y-3">
-  @for (offer of visibleTrades(); track offer.id) {
-    <div class="rounded-xl border border-border bg-surface p-4">
-      <div class="flex items-center justify-between">
-        <span class="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning">
-          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Pendiente
-        </span>
-        <time class="text-xs text-text-muted">{{ offer.createdAt | date: 'HH:mm:ss' }}</time>
+<div class="space-y-5">
+  <div class="space-y-3">
+    @for (offer of pendingTrades(); track offer.id) {
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="flex items-center justify-between">
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"
+          >
+            <svg
+              class="h-3 w-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Pendiente
+          </span>
+          <time class="text-xs text-text-muted">{{ offer.createdAt | date: 'HH:mm:ss' }}</time>
+        </div>
+
+        <p class="mt-3 text-sm text-text">
+          <span class="font-semibold">{{ playerName(offer.fromPlayerId) }}</span> ofrece a
+          <span class="font-semibold">{{ playerName(offer.toPlayerId) }}</span>
+        </p>
+
+        <div class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <div class="rounded-lg bg-surface-elevated p-3">
+            <p class="mb-1 font-medium text-text-secondary">Ofrece:</p>
+            <p class="text-text">
+              Dinero: <span class="font-medium">{{ format(offer.fromItems.cash) }}</span>
+            </p>
+            <p class="text-text-secondary">Props: {{ propertyNames(offer.fromItems.propertyIds) }}</p>
+          </div>
+          <div class="rounded-lg bg-surface-elevated p-3">
+            <p class="mb-1 font-medium text-text-secondary">Recibe:</p>
+            <p class="text-text">
+              Dinero: <span class="font-medium">{{ format(offer.toItems.cash) }}</span>
+            </p>
+            <p class="text-text-secondary">Props: {{ propertyNames(offer.toItems.propertyIds) }}</p>
+          </div>
+        </div>
+
+        @if (canAccept(offer) || canCancel(offer)) {
+          <div class="mt-4 flex gap-2">
+            @if (canCancel(offer)) {
+              <app-button
+                class="ml-auto"
+                variant="secondary"
+                (clickAction)="cancelAction.emit(offer.id)"
+              >
+                Cancelar
+              </app-button>
+            } @else {
+              <app-button variant="secondary" (clickAction)="rejectAction.emit(offer.id)">
+                Rechazar
+              </app-button>
+              <app-button (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
+            }
+          </div>
+        }
       </div>
+    } @empty {
+      <p class="text-center text-sm text-text-secondary">No tienes ofertas pendientes.</p>
+    }
+  </div>
 
-      <p class="mt-3 text-sm text-text">
-        <span class="font-semibold">{{ playerName(offer.fromPlayerId) }}</span> ofrece a
-        <span class="font-semibold">{{ playerName(offer.toPlayerId) }}</span>
-      </p>
+  @if (historyTrades().length) {
+    <div>
+      <h3 class="mb-2 text-sm font-semibold text-text-secondary">Histórico</h3>
+      <div class="space-y-3">
+        @for (offer of historyTrades(); track offer.id) {
+          <div class="rounded-xl border border-border bg-surface p-4 opacity-90">
+            <div class="flex items-center justify-between">
+              <span
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                [class.bg-positive-muted]="offer.status === 'accepted'"
+                [class.text-positive]="offer.status === 'accepted'"
+                [class.bg-danger-muted]="offer.status === 'rejected'"
+                [class.text-negative]="offer.status === 'rejected'"
+                [class.bg-surface-elevated]="offer.status === 'cancelled'"
+                [class.text-text-secondary]="offer.status === 'cancelled'"
+              >
+                @switch (offer.status) {
+                  @case ('accepted') {
+                    <svg
+                      class="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Aceptado
+                  }
+                  @case ('rejected') {
+                    <svg
+                      class="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Rechazado
+                  }
+                  @case ('cancelled') {
+                    <svg
+                      class="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                      />
+                    </svg>
+                    Cancelado
+                  }
+                }
+              </span>
+              <time class="text-xs text-text-muted">
+                {{ (offer.resolvedAt ?? offer.createdAt) | date: 'HH:mm:ss' }}
+              </time>
+            </div>
 
-      <div class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-        <div class="rounded-lg bg-surface-elevated p-3">
-          <p class="mb-1 font-medium text-text-secondary">Ofrece:</p>
-          <p class="text-text">Dinero: <span class="font-medium">{{ format(offer.fromItems.cash) }}</span></p>
-          <p class="text-text-secondary">Props: {{ propertyNames(offer.fromItems.propertyIds) }}</p>
-        </div>
-        <div class="rounded-lg bg-surface-elevated p-3">
-          <p class="mb-1 font-medium text-text-secondary">Recibe:</p>
-          <p class="text-text">Dinero: <span class="font-medium">{{ format(offer.toItems.cash) }}</span></p>
-          <p class="text-text-secondary">Props: {{ propertyNames(offer.toItems.propertyIds) }}</p>
-        </div>
+            <p class="mt-3 text-sm text-text">
+              <span class="font-semibold">{{ playerName(offer.fromPlayerId) }}</span> ofrece a
+              <span class="font-semibold">{{ playerName(offer.toPlayerId) }}</span>
+            </p>
+
+            <div class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <div class="rounded-lg bg-surface-elevated p-3">
+                <p class="mb-1 font-medium text-text-secondary">Ofrece:</p>
+                <p class="text-text">
+                  Dinero: <span class="font-medium">{{ format(offer.fromItems.cash) }}</span>
+                </p>
+                <p class="text-text-secondary">Props: {{ propertyNames(offer.fromItems.propertyIds) }}</p>
+              </div>
+              <div class="rounded-lg bg-surface-elevated p-3">
+                <p class="mb-1 font-medium text-text-secondary">Recibe:</p>
+                <p class="text-text">
+                  Dinero: <span class="font-medium">{{ format(offer.toItems.cash) }}</span>
+                </p>
+                <p class="text-text-secondary">Props: {{ propertyNames(offer.toItems.propertyIds) }}</p>
+              </div>
+            </div>
+          </div>
+        }
       </div>
-
-      @if (canAccept(offer)) {
-        <div class="mt-4 flex gap-2">
-          <app-button variant="secondary" (clickAction)="rejectAction.emit(offer.id)">Rechazar</app-button>
-          <app-button (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
-        </div>
-      }
     </div>
-  } @empty {
-    <p class="text-center text-sm text-text-secondary">No tienes ofertas pendientes.</p>
   }
 </div>

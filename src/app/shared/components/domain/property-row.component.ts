@@ -2,6 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import type { Edition, PlayerProperty, PropertyMetadata } from '../../../core/models';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { ICONS } from '../../icons';
+import { needsDarkGroupText, needsGroupBorder } from '../../utils/property-group';
 
 @Component({
   selector: 'app-property-row',
@@ -34,15 +35,9 @@ export class PropertyRowComponent {
     return null;
   });
 
-  protected needsBorder = computed(() => {
-    const color = this.property().groupColor.toUpperCase();
-    return color === '#FFFFFF' || color === '#FFFF00' || color === '#000000';
-  });
+  protected needsBorder = computed(() => needsGroupBorder(this.property().groupColor));
 
-  protected needsDarkText = computed(() => {
-    const color = this.property().groupColor.toUpperCase();
-    return color === '#FFFFFF' || color === '#FFFF00' || color === '#F1C40F' || color === '#FFEB3B';
-  });
+  protected needsDarkText = computed(() => needsDarkGroupText(this.property().groupColor));
 
   protected ariaLabel = computed(() => {
     const parts = [this.property().name, this.property().group];

@@ -162,6 +162,27 @@ export class TradeService {
     });
   }
 
+  cancel(roomId: string, offerId: string): Promise<void> {
+    return this.gameState.runInTransaction(roomId, (room) => {
+      const offerIndex = room.trades.findIndex((t) => t.id === offerId);
+      if (offerIndex === -1) throw new Error('Oferta no encontrada');
+      const offer = room.trades[offerIndex];
+      if (offer.status !== 'pending') throw new Error('La oferta ya fue resuelta');
+
+      const uid = this.auth.userId();
+      if (uid !== offer.fromPlayerId) {
+        throw new Error('Solo el creador puede cancelar la oferta');
+      }
+
+      const trades = room.trades.map((t) =>
+        t.id === offerId
+          ? { ...t, status: 'cancelled' as const, resolvedAt: Date.now() }
+          : t,
+      );
+      return { ...room, trades };
+    });
+  }
+
   private applyPropertyTransfer(
     source: Player['properties'],
     outgoing: string[],

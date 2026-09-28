@@ -2,6 +2,7 @@ import { Component, computed, inject, input, output } from '@angular/core';
 import type { Edition, PlayerProperty, PropertyMetadata } from '../../../core/models';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { MoneyPipe } from '../../pipes/money.pipe';
+import { needsGroupBorder } from '../../utils/property-group';
 import { MoneyDisplayComponent } from './money-display.component';
 
 @Component({
@@ -41,10 +42,7 @@ export class PropertyCardComponent {
     return null;
   });
 
-  protected needsBorder = computed(() => {
-    const color = this.property().groupColor.toUpperCase();
-    return color === '#FFFFFF' || color === '#FFFF00' || color === '#000000';
-  });
+  protected needsBorder = computed(() => needsGroupBorder(this.property().groupColor));
 
   protected ariaLabel = computed(() => {
     const parts = [this.property().name, this.property().group];

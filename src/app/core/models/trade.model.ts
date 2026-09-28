@@ -3,7 +3,7 @@ export interface TradeItems {
   propertyIds: string[];
 }
 
-export type TradeStatus = 'pending' | 'accepted' | 'rejected';
+export type TradeStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 
 export interface TradeOffer {
   id: string;

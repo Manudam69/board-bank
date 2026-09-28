@@ -4,6 +4,14 @@ import { AuthService } from './auth.service';
 import { GameStateService } from './game-state.service';
 import { IdService } from './id.service';
 
+export interface TransferMultiMetadata {
+  transferGroupId: string;
+  transferMulti: true;
+  perPlayerAmount: number;
+  recipientCount: number;
+  totalAmount: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BankService {
   private readonly gameState = inject(GameStateService);
@@ -75,6 +83,57 @@ export class BankService {
 
       const log = this.buildLog('transfer', amount, reason, fromId, toId, undefined, metadata);
       return { ...room, players, log: [...room.log, log] };
+    });
+  }
+
+  transferMulti(
+    roomId: string,
+    fromId: string | 'bank',
+    toIds: Array<string | 'bank'>,
+    amountPerPlayer: number,
+    reason: string,
+  ): Promise<void> {
+    if (amountPerPlayer <= 0) throw new Error('La cantidad debe ser mayor que cero');
+    if (toIds.length === 0) throw new Error('Debe haber al menos un destinatario');
+    if (new Set(toIds).size !== toIds.length) throw new Error('Los destinatarios no pueden repetirse');
+    if (toIds.includes(fromId)) throw new Error('Origen y destino no pueden ser iguales');
+    this.ensureActor(fromId);
+
+    return this.gameState.runInTransaction(roomId, (room) => {
+      const from = fromId === 'bank' ? undefined : this.requirePlayer(room, fromId);
+      const total = amountPerPlayer * toIds.length;
+
+      if (from && from.cash < total) {
+        throw new Error(`${from.name} no tiene suficiente dinero`);
+      }
+
+      for (const toId of toIds) {
+        if (toId !== 'bank') {
+          this.requirePlayer(room, toId);
+        }
+      }
+
+      const toSet = new Set(toIds);
+      const players = room.players.map((p) => {
+        if (from && p.id === from.id) return { ...p, cash: p.cash - total };
+        if (toSet.has(p.id)) return { ...p, cash: p.cash + amountPerPlayer };
+        return p;
+      });
+
+      const groupId = this.id.newId();
+      const metadata: Record<string, unknown> = {
+        transferGroupId: groupId,
+        transferMulti: true,
+        perPlayerAmount: amountPerPlayer,
+        recipientCount: toIds.length,
+        totalAmount: total,
+      };
+
+      const logs = toIds.map((toId) =>
+        this.buildLog('transfer', amountPerPlayer, reason, fromId, toId, undefined, metadata),
+      );
+
+      return { ...room, players, log: [...room.log, ...logs] };
     });
   }
 

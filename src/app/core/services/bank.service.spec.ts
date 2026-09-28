@@ -163,6 +163,97 @@ describe('BankService guards', () => {
     expect(savedRoom?.finishedAt).toBeUndefined();
   });
 
+  describe('transferMulti', () => {
+    it('distributes per-player amount to each recipient and deducts total from sender', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+            { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.transferMulti('ROOM', 'u1', ['u2', 'u3'], 100, 'Reparto');
+
+      expect(savedRoom?.players.find((p) => p.id === 'u1')?.cash).toBe(1300);
+      expect(savedRoom?.players.find((p) => p.id === 'u2')?.cash).toBe(1100);
+      expect(savedRoom?.players.find((p) => p.id === 'u3')?.cash).toBe(1100);
+      const transferLogs = savedRoom?.log.filter((entry) => entry.type === 'transfer');
+      expect(transferLogs).toHaveLength(2);
+      expect(transferLogs?.[0].metadata?.['transferGroupId']).toBe(transferLogs?.[1].metadata?.['transferGroupId']);
+      expect(transferLogs?.[0].amount).toBe(100);
+      expect(transferLogs?.[1].amount).toBe(100);
+    });
+
+    it('rejects multi-transfer when total exceeds available cash', () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+            { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      return expect(service.transferMulti('ROOM', 'u1', ['u2', 'u3'], 1000, 'Reparto')).rejects.toThrow(
+        'Ana no tiene suficiente dinero',
+      );
+    });
+
+    it('rejects empty recipients', () => {
+      expect(() => service.transferMulti('ROOM', 'u1', [], 100, 'X')).toThrow('Debe haber al menos un destinatario');
+    });
+
+    it('rejects duplicate recipients', () => {
+      expect(() => service.transferMulti('ROOM', 'u1', ['u2', 'u2'], 100, 'X')).toThrow(
+        'Los destinatarios no pueden repetirse',
+      );
+    });
+
+    it('rejects transfer to self within the group', () => {
+      expect(() => service.transferMulti('ROOM', 'u1', ['u2', 'u1'], 100, 'X')).toThrow(
+        'Origen y destino no pueden ser iguales',
+      );
+    });
+
+    it('rejects transfer from another players wallet', () => {
+      expect(() => service.transferMulti('ROOM', 'u2', ['u3'], 100, 'X')).toThrow(
+        'No puedes realizar operaciones sobre la cartera de otro jugador',
+      );
+    });
+
+    it('rejects bankrupt recipients', () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: true, host: false, joinedAt: 0 },
+          ],
+        };
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      return expect(service.transferMulti('ROOM', 'u1', ['u2'], 100, 'X')).rejects.toThrow('El jugador está en quiebra');
+    });
+  });
+
   describe('bankPayTo', () => {
     it('adds cash to the recipient and logs a bank-payment entry', async () => {
       let savedRoom: Room | undefined;

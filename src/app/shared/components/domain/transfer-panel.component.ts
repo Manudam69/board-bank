@@ -5,6 +5,12 @@ import { ButtonComponent } from '../ui/button.component';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { ICONS } from '../../icons';
 
+export interface TransferAction {
+  toIds: Array<string | 'bank'>;
+  amountPerPlayer: number;
+  reason: string;
+}
+
 @Component({
   selector: 'app-transfer-panel',
   imports: [AmountInputComponent, ButtonComponent],
@@ -19,44 +25,108 @@ export class TransferPanelComponent {
   readonly edition = input<Edition | undefined>(undefined);
   readonly amount = model(0);
   readonly reason = model('');
-  readonly transferAction = output<{ toId: string | 'bank'; amount: number; reason: string }>();
+  readonly transferAction = output<TransferAction>();
 
   protected readonly icons = ICONS;
-  protected readonly toId = signal<string | undefined>(undefined);
+  protected readonly selectedIds = signal<Set<string>>(new Set());
 
-  protected eligibleTo = computed(() => {
-    return [
-      { id: 'bank' as const, name: 'Banco', avatarColor: '#64748b' },
-      ...this.players()
-        .filter((p) => p.id !== this.me().id && !p.bankrupt)
-        .map((p) => ({ id: p.id, name: p.name, avatarColor: p.avatarColor })),
-    ];
+  protected eligiblePlayers = computed(() =>
+    this.players().filter((p) => p.id !== this.me().id && !p.bankrupt),
+  );
+
+  protected hasEligiblePlayers = computed(() => this.eligiblePlayers().length > 0);
+
+  protected bankOption = computed(() => ({
+    id: 'bank' as const,
+    name: 'Banco',
+    avatarColor: '#64748b',
+  }));
+
+  protected selectedCount = computed(() => this.selectedIds().size);
+
+  protected selectedPlayerCount = computed(() =>
+    [...this.selectedIds()].filter((id) => id !== 'bank').length,
+  );
+
+  protected allPlayersSelected = computed(() => {
+    const eligible = this.eligiblePlayers();
+    if (eligible.length === 0) return false;
+    return eligible.every((p) => this.selectedIds().has(p.id));
   });
 
-  protected remaining = computed(() => Math.max(0, this.me().cash - this.amount()));
+  protected total = computed(() => this.amount() * this.selectedCount());
 
-  protected canSubmit = computed(() => {
-    return this.amount() > 0 && !!this.toId() && this.me().cash >= this.amount();
+  protected remaining = computed(() => Math.max(0, this.me().cash - this.total()));
+
+  protected insufficient = computed(
+    () => this.amount() > 0 && this.selectedCount() > 0 && this.me().cash < this.total(),
+  );
+
+  protected canSubmit = computed(
+    () => this.amount() > 0 && this.selectedCount() > 0 && this.me().cash >= this.total(),
+  );
+
+  protected destinationSummary = computed(() => {
+    const count = this.selectedCount();
+    if (count === 0) return { label: 'Destinatarios', detail: '' };
+
+    const names: string[] = [];
+    if (this.selectedIds().has('bank')) names.push('Banco');
+    for (const p of this.eligiblePlayers()) {
+      if (this.selectedIds().has(p.id)) names.push(p.name);
+    }
+
+    if (count === 1) return { label: names[0], detail: '' };
+    const joined = names.slice(0, 3).join(', ');
+    const extra = names.length > 3 ? ` +${names.length - 3}` : '';
+    return { label: `${count} destinatarios`, detail: `${joined}${extra}` };
   });
+
+  protected toggleRecipient(id: string | 'bank'): void {
+    this.selectedIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  protected toggleSelectAllPlayers(): void {
+    const eligible = this.eligiblePlayers();
+    if (eligible.length === 0) return;
+
+    if (this.allPlayersSelected()) {
+      this.selectedIds.update((set) => {
+        const next = new Set(set);
+        for (const p of eligible) next.delete(p.id);
+        return next;
+      });
+    } else {
+      this.selectedIds.update((set) => {
+        const next = new Set(set);
+        for (const p of eligible) next.add(p.id);
+        return next;
+      });
+    }
+  }
 
   protected onReasonInput(value: string): void {
     this.reason.set(value);
   }
 
-  protected selectTo(id: string): void {
-    this.toId.set(id);
-  }
-
   protected submit(): void {
-    const to = this.toId();
-    if (!to) return;
+    const toIds = [...this.selectedIds()].filter(
+      (id) => id === 'bank' || this.players().some((p) => p.id === id && !p.bankrupt),
+    );
+    if (toIds.length === 0 || this.amount() <= 0) return;
+
     this.transferAction.emit({
-      toId: to,
-      amount: this.amount(),
+      toIds,
+      amountPerPlayer: this.amount(),
       reason: this.reason() || 'Transferencia',
     });
     this.amount.set(0);
     this.reason.set('');
-    this.toId.set(undefined);
+    this.selectedIds.set(new Set());
   }
 }

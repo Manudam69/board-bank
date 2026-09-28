@@ -97,6 +97,83 @@ describe('UndoService', () => {
     expect(service.undoableEntry(room, 'u1')).toBeNull();
   });
 
+  it('reverses a multi-recipient transfer group atomically', async () => {
+    lastRoom = makeRoom();
+    lastRoom.players = [
+      { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1300, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+      { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1100, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+      { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1100, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+    ];
+    const groupId = newId();
+    lastRoom.log.push(
+      makeEntry({
+        type: 'transfer',
+        fromPlayerId: 'u1',
+        toPlayerId: 'u2',
+        amount: 100,
+        description: 'Reparto',
+        metadata: { transferGroupId: groupId, transferMulti: true, recipientCount: 2 },
+      }),
+    );
+    lastRoom.log.push(
+      makeEntry({
+        type: 'transfer',
+        fromPlayerId: 'u1',
+        toPlayerId: 'u3',
+        amount: 100,
+        description: 'Reparto',
+        metadata: { transferGroupId: groupId, transferMulti: true, recipientCount: 2 },
+      }),
+    );
+
+    await service.undoLast('ROOM');
+
+    expect(lastRoom!.players[0].cash).toBe(1500);
+    expect(lastRoom!.players[1].cash).toBe(1000);
+    expect(lastRoom!.players[2].cash).toBe(1000);
+    expect(lastRoom!.log[0].metadata?.['undone']).toBe(true);
+    expect(lastRoom!.log[1].metadata?.['undone']).toBe(true);
+    expect(lastRoom!.log[2].type).toBe('undo');
+    expect(lastRoom!.log[2].metadata?.['undoesIds']).toEqual([lastRoom!.log[0].id, lastRoom!.log[1].id]);
+  });
+
+  it('fails group undo when any recipient no longer has funds', async () => {
+    lastRoom = makeRoom();
+    lastRoom.players = [
+      { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1300, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+      { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1100, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+      { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 50, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+    ];
+    const groupId = newId();
+    lastRoom.log.push(
+      makeEntry({
+        type: 'transfer',
+        fromPlayerId: 'u1',
+        toPlayerId: 'u2',
+        amount: 100,
+        description: 'Reparto',
+        metadata: { transferGroupId: groupId, transferMulti: true, recipientCount: 2 },
+      }),
+    );
+    lastRoom.log.push(
+      makeEntry({
+        type: 'transfer',
+        fromPlayerId: 'u1',
+        toPlayerId: 'u3',
+        amount: 100,
+        description: 'Reparto',
+        metadata: { transferGroupId: groupId, transferMulti: true, recipientCount: 2 },
+      }),
+    );
+
+    await expect(service.undoLast('ROOM')).rejects.toThrow('ya no tiene suficiente dinero');
+    expect(lastRoom!.players[0].cash).toBe(1300);
+    expect(lastRoom!.players[1].cash).toBe(1100);
+    expect(lastRoom!.players[2].cash).toBe(50);
+    expect(lastRoom!.log[0].metadata?.['undone']).not.toBe(true);
+    expect(lastRoom!.log[1].metadata?.['undone']).not.toBe(true);
+  });
+
   it('reverses a transfer from player to player', async () => {
     lastRoom = makeRoom();
     lastRoom.log.push(makeEntry({ type: 'transfer', fromPlayerId: 'u1', toPlayerId: 'u2', amount: 100, description: 'Pago' }));

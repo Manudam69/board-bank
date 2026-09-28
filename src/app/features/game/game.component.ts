@@ -229,6 +229,7 @@ export class GameComponent {
           this.notifyUndoIfNeeded(entry, myId);
         } else {
           this.notifyBankActionIfNeeded(entry, myId);
+          this.notifyIncomingTransferIfNeeded(entry, myId);
         }
       }
     });
@@ -321,23 +322,55 @@ export class GameComponent {
     return id;
   }
 
-  protected onTransfer(data: { toId: string | 'bank'; amount: number; reason: string }): void {
+  protected onTransfer(data: { toIds: (string | 'bank')[]; amountPerPlayer: number; reason: string }): void {
     const roomId = this.roomId();
     const me = this.requireCurrentPlayer();
-    const toName =
-      data.toId === 'bank'
-        ? 'el Banco'
-        : (this.room()?.players.find((p) => p.id === data.toId)?.name ?? 'otro jugador');
     if (!roomId) return;
+
+    const toIds = data.toIds;
+    const amount = data.amountPerPlayer;
+    const total = amount * toIds.length;
+
+    if (toIds.length === 1) {
+      const toName =
+        toIds[0] === 'bank'
+          ? 'el Banco'
+          : (this.room()?.players.find((p) => p.id === toIds[0])?.name ?? 'otro jugador');
+      this.runOp(
+        () => this.bank.transfer(roomId, me, toIds[0], amount, data.reason),
+        {
+          message: 'Transferencia realizada',
+          detail: `Enviaste ${this.format(amount)} a ${toName}`,
+          sound: 'transfer',
+        },
+        true,
+      );
+      return;
+    }
+
+    const room = this.room();
+    const names = toIds.map((id) =>
+      id === 'bank' ? 'Banco' : (room?.players.find((p) => p.id === id)?.name ?? 'otro jugador'),
+    );
+    const namesText = this.joinNames(names);
+
     this.runOp(
-      () => this.bank.transfer(roomId, me, data.toId, data.amount, data.reason),
+      () => this.bank.transferMulti(roomId, me, toIds, amount, data.reason),
       {
         message: 'Transferencia realizada',
-        detail: `Enviaste ${this.format(data.amount)} a ${toName}`,
+        detail: `${namesText} recibieron ${this.format(amount)} cada uno · Total: ${this.format(total)}`,
         sound: 'transfer',
       },
       true,
     );
+  }
+
+  private joinNames(names: string[]): string {
+    if (names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} y ${names[1]}`;
+    const allButLast = names.slice(0, -1).join(', ');
+    return `${allButLast} y ${names.at(-1)}`;
   }
 
   protected onBuy(data: { propertyId: string }): void {
@@ -657,6 +690,21 @@ export class GameComponent {
         this.activeAction.set('build');
         break;
     }
+  }
+
+  private notifyIncomingTransferIfNeeded(entry: TransactionLogEntry, myId?: string): void {
+    if (entry.type !== 'transfer') return;
+    if (!myId || entry.toPlayerId !== myId) return;
+    if (!entry.fromPlayerId || entry.fromPlayerId === 'bank' || entry.fromPlayerId === myId) return;
+    if (entry.metadata?.['undone']) return;
+    if (entry.metadata?.['bankAction']) return;
+
+    const fromName = this.playerName(entry.fromPlayerId);
+    this.toastService.success(
+      `${fromName} te transfirió ${this.formatScaled(entry.amount)}`,
+      entry.description,
+    );
+    this.soundService.play('cashIn');
   }
 
   private notifyUndoIfNeeded(entry: TransactionLogEntry, myId?: string): void {

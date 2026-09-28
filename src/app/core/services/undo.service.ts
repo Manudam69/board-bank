@@ -141,6 +141,9 @@ export class UndoService {
   private applyInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {
     switch (entry.type) {
       case 'transfer':
+        if (entry.metadata?.['transferGroupId']) {
+          return this.applyTransferGroupInverse(room, entry, userId);
+        }
         return this.applyTransferInverse(room, entry, userId);
       case 'buy-property':
         return this.applyBuyInverse(room, entry, userId);
@@ -156,6 +159,72 @@ export class UndoService {
       default:
         throw new Error('Tipo de operación no deshechible');
     }
+  }
+
+  private findGroupEntries(room: Room, groupId: string): TransactionLogEntry[] {
+    return room.log.filter(
+      (entry) => entry.type === 'transfer' && entry.metadata?.['transferGroupId'] === groupId,
+    );
+  }
+
+  private applyTransferGroupInverse(
+    room: Room,
+    anchor: TransactionLogEntry,
+    userId: string,
+  ): Room {
+    const groupId = anchor.metadata?.['transferGroupId'] as string;
+    const entries = this.findGroupEntries(room, groupId);
+
+    const reversedEntries = [...entries].reverse();
+
+    for (const entry of reversedEntries) {
+      const toId = entry.toPlayerId;
+      if (toId && toId !== 'bank') {
+        const to = this.requirePlayer(room, toId);
+        if (to.cash < entry.amount) {
+          throw new Error(`${to.name} ya no tiene suficiente dinero para devolver la operación`);
+        }
+      }
+    }
+
+    let players = room.players;
+    for (const entry of reversedEntries) {
+      const toId = entry.toPlayerId;
+      const fromId = entry.fromPlayerId;
+      if (toId && toId !== 'bank') {
+        players = this.adjustCash(players, toId, -entry.amount);
+      }
+      if (fromId && fromId !== 'bank') {
+        players = this.adjustCash(players, fromId, entry.amount);
+      }
+    }
+
+    const groupIds = entries.map((e) => e.id);
+    const totalAmount = entries.reduce((sum, e) => sum + e.amount, 0);
+    const description = entries[0]?.description ?? 'Transferencia';
+    const undoLog: TransactionLogEntry = {
+      id: this.id.newId(),
+      timestamp: Date.now(),
+      type: 'undo',
+      amount: totalAmount,
+      description: `Deshecho: ${description}`,
+      fromPlayerId: undefined,
+      toPlayerId: entries[0]?.fromPlayerId,
+      metadata: { undoesIds: groupIds, transferGroupId: groupId, undoneBy: userId },
+    };
+
+    return {
+      ...room,
+      players,
+      log: [...this.markUndoneMany(room.log, groupIds), undoLog],
+    };
+  }
+
+  private markUndoneMany(log: TransactionLogEntry[], entryIds: string[]): TransactionLogEntry[] {
+    return log.map((entry) => {
+      if (!entryIds.includes(entry.id)) return entry;
+      return { ...entry, metadata: { ...entry.metadata, undone: true } };
+    });
   }
 
   private applyRearrangeInverse(room: Room, entry: TransactionLogEntry, userId: string): Room {

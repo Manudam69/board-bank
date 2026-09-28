@@ -28,37 +28,77 @@
 
     <div class="flex-1 rounded-xl border border-dashed border-border bg-surface-elevated/30 p-3">
       <p class="text-xs font-medium text-text-secondary">Destino</p>
-      <p class="truncate text-sm font-semibold text-text">
-        @if (toId()) {
-          @if (toId() === 'bank') {
-            Banco
-          } @else {
-            {{ players().find((p) => p.id === toId())?.name ?? 'Jugador' }}
-          }
-        } @else {
-          <span class="text-text-muted">Selecciona destino</span>
-        }
-      </p>
+      <p class="truncate text-sm font-semibold text-text">{{ destinationSummary().label }}</p>
+      @if (destinationSummary().detail) {
+        <p class="truncate text-xs text-text-muted" title="{{ destinationSummary().detail }}">
+          {{ destinationSummary().detail }}
+        </p>
+      }
     </div>
   </div>
 
   <div class="space-y-2">
-    <p class="text-sm font-medium text-text-secondary">Para</p>
-    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Destinatario">
-      @for (target of eligibleTo(); track target.id) {
+    <div class="flex items-center justify-between gap-2">
+      <p class="text-sm font-medium text-text-secondary">Para</p>
+      @if (hasEligiblePlayers()) {
         <button
           type="button"
-          role="radio"
-          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
-          [class.border-accent]="toId() === target.id"
-          [class.bg-accent-muted]="toId() === target.id"
-          [class.text-text]="toId() === target.id"
-          [class.border-border]="toId() !== target.id"
-          [class.bg-surface-elevated]="toId() !== target.id"
-          [class.text-text-secondary]="toId() !== target.id"
-          [class.hover:bg-surface-hover]="toId() !== target.id"
-          [attr.aria-checked]="toId() === target.id"
-          (click)="selectTo(target.id)"
+          class="text-xs font-semibold text-accent transition hover:text-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+          (click)="toggleSelectAllPlayers()"
+        >
+          {{ allPlayersSelected() ? 'Deseleccionar todos' : 'Seleccionar todos' }}
+        </button>
+      }
+    </div>
+
+    <div class="flex flex-wrap gap-2" role="group" aria-label="Destinatarios">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        [class.border-accent]="selectedIds().has('bank')"
+        [class.bg-accent-muted]="selectedIds().has('bank')"
+        [class.text-text]="selectedIds().has('bank')"
+        [class.border-border]="!selectedIds().has('bank')"
+        [class.bg-surface-elevated]="!selectedIds().has('bank')"
+        [class.text-text-secondary]="!selectedIds().has('bank')"
+        [class.hover:bg-surface-hover]="!selectedIds().has('bank')"
+        [attr.aria-pressed]="selectedIds().has('bank')"
+        (click)="toggleRecipient('bank')"
+      >
+        <span
+          class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+          [style.background-color]="bankOption().avatarColor"
+        >
+          {{ bankOption().name.charAt(0).toUpperCase() }}
+        </span>
+        <span class="truncate max-w-[8rem]">{{ bankOption().name }}</span>
+        @if (selectedIds().has('bank')) {
+          <svg
+            class="ml-1 h-4 w-4 text-accent"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="3"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['check']" />
+          </svg>
+        }
+      </button>
+
+      @for (target of eligiblePlayers(); track target.id) {
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+          [class.border-accent]="selectedIds().has(target.id)"
+          [class.bg-accent-muted]="selectedIds().has(target.id)"
+          [class.text-text]="selectedIds().has(target.id)"
+          [class.border-border]="!selectedIds().has(target.id)"
+          [class.bg-surface-elevated]="!selectedIds().has(target.id)"
+          [class.text-text-secondary]="!selectedIds().has(target.id)"
+          [class.hover:bg-surface-hover]="!selectedIds().has(target.id)"
+          [attr.aria-pressed]="selectedIds().has(target.id)"
+          (click)="toggleRecipient(target.id)"
         >
           <span
             class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -67,34 +107,78 @@
             {{ target.name.charAt(0).toUpperCase() }}
           </span>
           <span class="truncate max-w-[8rem]">{{ target.name }}</span>
+          @if (selectedIds().has(target.id)) {
+            <svg
+              class="ml-1 h-4 w-4 text-accent"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="3"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['check']" />
+            </svg>
+          }
         </button>
       }
     </div>
+
+    @if (selectedCount() > 0) {
+      <p class="text-xs text-text-secondary" aria-live="polite">
+        {{ selectedPlayerCount() }}
+        {{ selectedPlayerCount() === 1 ? 'jugador' : 'jugadores' }} seleccionados
+        @if (selectedIds().has('bank')) { · Banco incluido }
+      </p>
+    }
   </div>
 
   <app-amount-input
     [(amount)]="amount"
     [edition]="edition()"
     [currency]="currency()"
-    label="Cantidad"
+    label="Monto por jugador"
     [max]="me().cash"
   />
 
-  @if (amount() > 0) {
-    <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm">
-      <p class="text-text-secondary">
-        Te quedará
-        <span class="font-semibold text-text">{{ formatter.formatExact(remaining(), currency()) }}</span>
-      </p>
-      @if (toId()) {
-        <p class="mt-1 text-text-secondary">
-          @if (toId() === 'bank') {
-            El Banco recibe
-          } @else {
-            {{ players().find((p) => p.id === toId())?.name ?? 'Jugador' }} recibe
-          }
-          <span class="font-semibold text-text">{{ formatter.formatExact(amount(), currency()) }}</span>
+  @if (amount() > 0 && selectedCount() > 0) {
+    <div
+      class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm"
+      [class.border-negative]="insufficient()"
+      [class.bg-negative/5]="insufficient()"
+      aria-live="polite"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-text-secondary">Cada jugador recibe</span>
+        <span class="font-semibold tabular-nums text-text">{{ formatter.format(amount(), currency()) }}</span>
+      </div>
+      <div class="mt-1 flex items-center justify-between gap-2">
+        <span class="text-text-secondary">Destinatarios</span>
+        <span class="font-semibold text-text">{{ selectedCount() }}</span>
+      </div>
+      <div class="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2">
+        <span class="text-base font-semibold text-text">Total a transferir</span>
+        <span
+          class="text-lg font-bold tabular-nums"
+          [class.text-text]="!insufficient()"
+          [class.text-negative]="insufficient()"
+        >
+          {{ formatter.formatExact(total(), currency()) }}
+        </span>
+      </div>
+
+      @if (!insufficient()) {
+        <p class="mt-2 text-text-secondary">
+          Te quedará
+          <span class="font-semibold text-text">{{ formatter.formatExact(remaining(), currency()) }}</span>
         </p>
+      } @else {
+        <div class="mt-2 space-y-1">
+          <p class="font-semibold text-negative">Dinero insuficiente</p>
+          <p class="text-xs text-text-secondary">
+            Necesitas {{ formatter.formatExact(total(), currency()) }} para completar esta transferencia.
+            Tu saldo disponible es {{ formatter.formatExact(me().cash, currency()) }}.
+          </p>
+        </div>
       }
     </div>
   }
@@ -112,6 +196,10 @@
   </div>
 
   <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    Confirmar transferencia
+    @if (total() > 0) {
+      Transferir {{ formatter.formatExact(total(), currency()) }}
+    } @else {
+      Transferir
+    }
   </app-button>
 </div>

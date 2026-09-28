@@ -12,7 +12,7 @@ export class RentService {
     const owner = room.players.find((p) =>
       p.properties.some((pp) => pp.propertyId === propertyId),
     );
-    if (!owner) return { amount: 0, reason: 'Sin dueño: no se paga alquiler' };
+    if (!owner) return { amount: 0, reason: 'Sin dueño: no se paga renta' };
 
     const meta = edition.properties.find((p) => p.id === propertyId);
     if (!meta) return { amount: 0, reason: 'Propiedad no encontrada en la edición' };
@@ -27,9 +27,9 @@ export class RentService {
     }
 
     if (meta.isUtility) {
-      const utilities = this.countGroupOwned(owner, edition, 'Servicio');
-      const perDie = meta.rents[Math.min(utilities, 2) - 1] ?? meta.rents[0] ?? 0;
+      const perDie = this.utilityPerDie(owner, edition, meta);
       const safeDice = diceSum ?? 7;
+      const utilities = this.countGroupOwned(owner, edition, 'Servicio');
       return {
         amount: safeDice * perDie,
         reason: `${utilities} servicio(s) poseído(s) × dados ${safeDice}`,
@@ -47,7 +47,12 @@ export class RentService {
       return { amount: rent * 2, reason: 'Monopolio sin construir' };
     }
 
-    return { amount: rent, reason: houses === 0 ? 'Alquiler base' : `${houses} casa(s)` };
+    return { amount: rent, reason: houses === 0 ? 'Renta base' : `${houses} casa(s)` };
+  }
+
+  utilityPerDie(owner: Player, edition: Edition, meta: PropertyMetadata): number {
+    const utilities = this.countGroupOwned(owner, edition, 'Servicio');
+    return meta.rents[Math.min(utilities, 2) - 1] ?? meta.rents[0] ?? 0;
   }
 
   private countGroupOwned(owner: Player, edition: Edition, group: string): number {

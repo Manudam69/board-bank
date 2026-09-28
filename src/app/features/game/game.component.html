@@ -292,6 +292,7 @@
   [open]="activeAction() === 'rent'"
   title="Pagar renta"
   size="lg"
+  [flushBottom]="true"
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {

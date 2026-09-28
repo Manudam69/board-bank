@@ -9,27 +9,32 @@
     tabindex="-1"
   >
     <div [class]="dialogClasses()" (click)="$event.stopPropagation()">
-      <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-border sm:hidden" aria-hidden="true"></div>
-      <div class="mb-4 flex items-center justify-between gap-4">
-        @if (title()) {
-          <h2 class="text-lg font-semibold text-text">{{ title() }}</h2>
-        } @else {
-          <span></span>
-        }
-        @if (closeable()) {
-          <button
-            type="button"
-            class="focus-ring-inset rounded-full p-1 text-text-muted transition hover:bg-surface-elevated hover:text-text focus:outline-none"
-            aria-label="Cerrar"
-            (click)="close()"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        }
+      <div class="shrink-0 px-6 pt-6 pb-4">
+        <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-border sm:hidden" aria-hidden="true"></div>
+        <div class="flex items-center justify-between gap-4">
+          @if (title()) {
+            <h2 class="text-lg font-semibold text-text">{{ title() }}</h2>
+          } @else {
+            <span></span>
+          }
+          @if (closeable()) {
+            <button
+              type="button"
+              class="focus-ring-inset rounded-full p-1 text-text-muted transition hover:bg-surface-elevated hover:text-text focus:outline-none"
+              aria-label="Cerrar"
+              (click)="close()"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          }
+        </div>
       </div>
-      <div class="text-text-secondary">
+      <div
+        class="flex-1 min-h-0 overflow-y-auto px-6 text-text-secondary"
+        [class.pb-6]="!flushBottom()"
+      >
         <ng-content></ng-content>
       </div>
     </div>

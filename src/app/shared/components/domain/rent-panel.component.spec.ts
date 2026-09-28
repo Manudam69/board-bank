@@ -124,11 +124,17 @@ describe('RentPanelComponent', () => {
       (b as HTMLElement).textContent?.includes('Ronda'),
     ) as HTMLElement | undefined;
     expect(target).toBeTruthy();
+
+    const panelText = fixture.nativeElement.textContent;
+    expect(panelText).toContain('Renta');
+    expect(panelText).toContain('€2');
+    expect(panelText).not.toContain('€60');
+
     target!.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Alquiler calculado');
+    expect(fixture.nativeElement.textContent).toContain('Renta a pagar');
     expect(fixture.nativeElement.textContent).toContain('€2');
   });
 
@@ -150,6 +156,9 @@ describe('RentPanelComponent', () => {
     fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
     fixture.detectChanges();
     await fixture.whenStable();
+
+    const panelText = fixture.nativeElement.textContent;
+    expect(panelText).toContain('× dados');
 
     const propertyButtons = fixture.nativeElement.querySelectorAll('app-property-card button, button[aria-label]');
     const target = Array.from(propertyButtons).find((b) =>

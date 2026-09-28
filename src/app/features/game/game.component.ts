@@ -362,7 +362,7 @@ export class GameComponent {
       this.edition()?.properties.find((p) => p.id === data.propertyId)?.name ?? '';
     if (!roomId || !owner) return;
     this.runOp(
-      () => this.bank.transfer(roomId, me, owner.id, data.amount, `Alquiler de ${propertyName}`),
+      () => this.bank.transfer(roomId, me, owner.id, data.amount, `Renta de ${propertyName}`),
       {
         message: 'Renta pagada',
         detail: `${this.format(data.amount)} a ${owner.name}`,

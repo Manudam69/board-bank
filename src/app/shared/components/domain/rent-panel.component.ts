@@ -1,10 +1,11 @@
 import { Component, computed, inject, input, model, output, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { CurrencyConfig, Edition, Player, PropertyMetadata, Room } from '../../../core/models';
+import type { CurrencyConfig, Edition, Player, PlayerProperty, PropertyMetadata, Room } from '../../../core/models';
 import { ICONS } from '../../icons';
 import { PropertyCardComponent } from './property-card.component';
 import { ButtonComponent } from '../ui/button.component';
 import { MoneyDisplayComponent } from './money-display.component';
+import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { RentService } from '../../../core/services/rent.service';
 
@@ -15,6 +16,13 @@ interface Receiver {
   propertyIds: string[];
 }
 
+interface ReceiverProperty {
+  property: PropertyMetadata;
+  owned: PlayerProperty;
+  rentAmount?: number;
+  rentAmountText?: string;
+}
+
 @Component({
   selector: 'app-rent-panel',
   imports: [FormsModule, PropertyCardComponent, ButtonComponent, MoneyDisplayComponent, MoneyPipe],
@@ -22,6 +30,7 @@ interface Receiver {
 })
 export class RentPanelComponent implements OnInit {
   private readonly rentService = inject(RentService);
+  private readonly formatter = inject(MoneyFormatService);
 
   readonly room = input.required<Room>();
   readonly me = input.required<Player>();
@@ -54,13 +63,27 @@ export class RentPanelComponent implements OnInit {
 
   protected receiverProperties = computed(() => {
     const toId = this.selectedToId();
-    if (!toId) return [];
+    if (!toId) return [] as ReceiverProperty[];
     const receiver = this.receivers().find((r) => r.id === toId);
-    if (!receiver) return [];
+    if (!receiver) return [] as ReceiverProperty[];
     const ids = new Set(receiver.propertyIds);
+    const owner = this.room().players.find((p) => p.id === toId);
     return this.edition().properties
       .filter((p) => ids.has(p.id))
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => a.order - b.order)
+      .map((property) => {
+        const owned = owner?.properties.find((pp) => pp.propertyId === property.id)!;
+        if (property.isUtility) {
+          const perDie = owner ? this.rentService.utilityPerDie(owner, this.edition(), property) : 0;
+          return {
+            property,
+            owned,
+            rentAmountText: `${this.formatter.format(perDie, this.currency())} × dados`,
+          };
+        }
+        const amount = owner ? this.rentService.calculate(this.room(), this.edition(), property.id).amount : 0;
+        return { property, owned, rentAmount: amount };
+      });
   });
 
   protected needsDice = computed(() => this.selectedProperty()?.isUtility ?? false);
@@ -79,6 +102,12 @@ export class RentPanelComponent implements OnInit {
       property.id,
       this.resolvedDice(),
     );
+  });
+
+  /** Presentational list so the keyed @for re-runs the pop-in animation on amount change. */
+  protected rentInfoList = computed(() => {
+    const info = this.rentInfo();
+    return info ? [{ amount: info.amount, reason: info.reason }] : [];
   });
 
   protected canPay = computed(() => {

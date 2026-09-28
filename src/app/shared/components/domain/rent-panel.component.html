@@ -1,4 +1,4 @@
-<div class="space-y-5">
+<div class="flex min-h-full flex-1 flex-col gap-5">
   <div class="flex items-center gap-3">
     <div class="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-3">
       <div class="flex items-center gap-2">
@@ -40,7 +40,7 @@
 
   <div class="space-y-2">
     <p class="text-sm font-medium text-text-secondary">¿A quién le pagas?</p>
-    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Cobrador del alquiler">
+    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Cobrador de la renta">
       @for (receiver of receivers(); track receiver.id) {
         <button
           type="button"
@@ -77,13 +77,16 @@
         <span class="text-xs text-text-muted">{{ receiverProperties().length }} disponibles</span>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        @for (property of receiverProperties(); track property.id) {
+        @for (item of receiverProperties(); track item.property.id) {
           <app-property-card
-            [property]="property"
+            [property]="item.property"
             [edition]="edition()"
+            [owned]="item.owned"
+            [rentAmount]="item.rentAmount"
+            [rentAmountText]="item.rentAmountText"
             [selectable]="true"
-            [selected]="selectedProperty()?.id === property.id"
-            (propertyClick)="onSelectProperty(property)"
+            [selected]="selectedProperty()?.id === item.property.id"
+            (propertyClick)="onSelectProperty(item.property)"
           />
         } @empty {
           <p class="col-span-full text-sm text-text-secondary">
@@ -110,37 +113,61 @@
     </div>
   }
 
-  @if (rentInfo(); as info) {
-    <div
-      class="rounded-xl border p-4"
-      [class.border-positive/30]="canPay()"
-      [class.bg-positive-muted/30]="canPay()"
-      [class.border-negative/30]="!canPay()"
-      [class.bg-danger-muted/30]="!canPay()"
-    >
-      <div class="flex items-center justify-between">
-        <p class="text-sm text-text-secondary">Alquiler calculado</p>
-        <app-money-display [amount]="info.amount" [currency]="currency()" size="lg" />
+  <!-- Spacer that pushes the footer to the modal bottom while keeping visible pre-footer whitespace -->
+  <div class="h-2 flex-1 sm:h-0"></div>
+
+  <footer
+    class="sticky bottom-0 z-10 -mx-6 border-t border-border bg-surface px-6 pt-4 pb-[calc(1rem+var(--safe-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.25)] sm:rounded-b-modal sm:pt-5 sm:pb-[calc(1.25rem+var(--safe-bottom))]"
+  >
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div class="min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Renta a pagar</p>
+        @if (rentInfo(); as info) {
+          <p class="mt-0.5 truncate text-xs text-text-secondary">
+            {{ info.reason }}
+            @if (selectedOwnerName()) {
+              <span class="text-text-secondary"> · {{ selectedOwnerName() }}</span>
+            }
+          </p>
+        } @else {
+          <p class="mt-0.5 text-xs text-text-secondary">Selecciona una propiedad para continuar.</p>
+        }
       </div>
-      <p class="mt-1 text-xs text-text-muted">{{ info.reason }}</p>
-      @if (selectedOwnerName()) {
-        <p class="text-xs text-text-muted">
-          Propietario: <span class="text-text-secondary">{{ selectedOwnerName() }}</span>
-        </p>
-      }
+
+      <div class="shrink-0">
+        @for (info of rentInfoList(); track info.amount) {
+          <app-money-display
+            class="animate-pop-in"
+            [amount]="info.amount"
+            [currency]="currency()"
+            size="lg"
+          />
+        } @empty {
+          <span class="block text-2xl font-bold tabular-nums leading-none text-text-muted">—</span>
+        }
+      </div>
+    </div>
+
+    @if (rentInfo(); as info) {
       @if (!canPay() && info.amount > 0) {
-        <p class="mt-2 text-xs font-medium text-negative">
+        <p class="mt-3 text-xs font-medium text-negative">
           Fondos insuficientes (tienes {{ me().cash | money: currency() }})
         </p>
       }
-    </div>
-  }
-
-  <app-button [fullWidth]="true" [disabled]="!canPay() || !isValidDice()" (clickAction)="submit()">
-    @if (rentInfo(); as info) {
-      Pagar {{ info.amount | money: currency() }}
-    } @else {
-      Pagar alquiler
     }
-  </app-button>
+
+    <app-button
+      class="mt-4 block"
+      [fullWidth]="true"
+      size="lg"
+      [disabled]="!canPay() || !isValidDice()"
+      (clickAction)="submit()"
+    >
+      @if (rentInfo(); as info) {
+        Pagar {{ info.amount | money: currency() }}
+      } @else {
+        Pagar renta
+      }
+    </app-button>
+  </footer>
 </div>

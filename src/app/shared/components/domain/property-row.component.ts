@@ -34,13 +34,6 @@ export class PropertyRowComponent {
     return null;
   });
 
-  protected rentPreview = computed(() => {
-    const o = this.owned();
-    if (!o) return this.property().rents[0];
-    if (o.hasHotel) return this.property().rents[5];
-    return this.property().rents[o.houses];
-  });
-
   protected needsBorder = computed(() => {
     const color = this.property().groupColor.toUpperCase();
     return color === '#FFFFFF' || color === '#FFFF00' || color === '#000000';

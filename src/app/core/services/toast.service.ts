@@ -15,6 +15,13 @@ export interface ToastMessage {
   action?: ToastAction;
 }
 
+interface ToastTimer {
+  timer: ReturnType<typeof setTimeout>;
+  durationMs: number;
+  shownAt: number;
+  remainingMs?: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -22,6 +29,8 @@ export class ToastService {
   private readonly nextId = signal(1);
   private readonly _toasts = signal<ToastMessage[]>([]);
   readonly toasts = this._toasts.asReadonly();
+
+  private readonly timers = new Map<string, ToastTimer>();
 
   show(type: ToastType, message: string, detail?: string, durationMs = 3500, action?: ToastAction): void {
     const id = String(this.nextId());
@@ -31,7 +40,9 @@ export class ToastService {
     this._toasts.update((list) => [...list, toast]);
 
     if (durationMs > 0) {
-      setTimeout(() => this.dismiss(id), durationMs);
+      const shownAt = Date.now();
+      const timer = setTimeout(() => this.dismiss(id), durationMs);
+      this.timers.set(id, { timer, durationMs, shownAt });
     }
   }
 
@@ -47,7 +58,40 @@ export class ToastService {
     this.show('info', message, detail, 3000);
   }
 
+  pause(id: string): void {
+    const entry = this.timers.get(id);
+    if (!entry || entry.remainingMs !== undefined) {
+      return;
+    }
+
+    clearTimeout(entry.timer);
+    const elapsed = Date.now() - entry.shownAt;
+    entry.remainingMs = Math.max(0, entry.durationMs - elapsed);
+  }
+
+  resume(id: string): void {
+    const entry = this.timers.get(id);
+    if (!entry || entry.remainingMs === undefined || entry.remainingMs <= 0) {
+      return;
+    }
+
+    const durationMs = entry.remainingMs;
+    const shownAt = Date.now();
+    const timer = setTimeout(() => this.dismiss(id), durationMs);
+
+    entry.timer = timer;
+    entry.durationMs = durationMs;
+    entry.shownAt = shownAt;
+    entry.remainingMs = undefined;
+  }
+
   dismiss(id: string): void {
+    const entry = this.timers.get(id);
+    if (entry) {
+      clearTimeout(entry.timer);
+      this.timers.delete(id);
+    }
+
     this._toasts.update((list) => list.filter((t) => t.id !== id));
   }
 }

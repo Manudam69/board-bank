@@ -6,7 +6,8 @@
   >
     @for (toast of toastService.toasts(); track toast.id) {
       <div
-        class="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-3 shadow-lg animate-toast-in sm:w-80"
+        [appToastSwipe]="toast.id"
+        class="pointer-events-auto touch-pan-y flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-3 shadow-lg animate-toast-in sm:w-80"
         role="status"
         [class.border-positive/40]="toast.type === 'success'"
         [class.border-negative/40]="toast.type === 'error'"

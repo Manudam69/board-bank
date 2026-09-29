@@ -56,7 +56,7 @@ export const ICONS: { [key: string]: string } = {
   filter: 'M22 3H2l8 9.46V19l4 2v-8.54L22 3z',
   'arrow-up': 'M12 19V5m0 0l-7 7m7-7l7 7',
   'arrow-down': 'M12 5v14m0 0l-7-7m7 7l7-7',
-  'rotate-ccw': 'M3 12a9 9 0 1118 0 9 9 0 01-18 0zM3 12h6m-6 0l4-4m-4 4l4 4',
+  'rotate-ccw': 'M3 12a9 9 0 109-9c-2.4 0-4.6.9-6.2 2.4L3 8m0-5v5h5',
 };
 
 export function icon(name: keyof typeof ICONS): string {

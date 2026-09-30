@@ -13,6 +13,7 @@ export type TransactionType =
   | 'bank-payment'
   | 'trade'
   | 'bankruptcy'
+  | 'liquidation'
   | 'game-end'
   | 'undo';
 

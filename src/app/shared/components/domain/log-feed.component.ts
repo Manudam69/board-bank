@@ -71,6 +71,7 @@ export class LogFeedComponent {
       'bank-payment': this.icons['circle-dollar-sign'],
       trade: this.icons['arrow-left-right'],
       bankruptcy: this.icons['alert-triangle'],
+      liquidation: this.icons['banknote'],
       'game-end': this.icons['crown'],
       undo: this.icons['rotate-ccw'],
     };
@@ -93,6 +94,7 @@ export class LogFeedComponent {
       'bank-payment': 'Pago del Banco',
       trade: 'Intercambio',
       bankruptcy: 'Quiebra',
+      liquidation: 'Liquidación',
       'game-end': 'Fin de partida',
       undo: 'Deshacer',
     };

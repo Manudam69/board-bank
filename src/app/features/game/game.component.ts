@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { BankService } from '../../core/services/bank.service';
 import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
+import { LiquidationService } from '../../core/services/liquidation.service';
 import { MoneyFormatService } from '../../core/services/money-format.service';
 import { PropertyService, unmortgageCost } from '../../core/services/property.service';
 import { TradeService } from '../../core/services/trade.service';
@@ -54,7 +55,7 @@ interface SuccessConfig {
   sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'salary' | 'notify';
 }
 
-type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | 'bank-payment' | undefined;
+type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | 'bank-payment' | 'liquidation' | undefined;
 
 @Component({
   selector: 'app-game',
@@ -101,6 +102,7 @@ export class GameComponent {
   protected readonly soundService = inject(SoundService);
   private readonly undoService = inject(UndoService);
   private readonly moneyFormatter = inject(MoneyFormatService);
+  private readonly liquidation = inject(LiquidationService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -119,6 +121,13 @@ export class GameComponent {
     return this.room()?.players.find((player) => player.id === userId);
   });
 
+  readonly liquidatePlan = computed(() => {
+    const player = this.currentPlayer();
+    const edition = this.edition();
+    if (!player || !edition) return null;
+    return this.liquidation.plan(player, edition);
+  });
+
   readonly isInRoom = computed(() => !!this.currentPlayer());
   readonly isHost = computed(() => {
     const userId = this.auth.userId();
@@ -131,6 +140,7 @@ export class GameComponent {
   readonly activeAction = signal<BankAction | null>(null);
   readonly busy = signal(false);
   readonly confirmBankruptcyOpen = signal(false);
+  readonly confirmLiquidateOpen = signal(false);
   readonly confirmLeaveOpen = signal(false);
   readonly confirmFinishOpen = signal(false);
   readonly confirmCancelTradeOpen = signal(false);
@@ -567,6 +577,28 @@ export class GameComponent {
     });
   }
 
+  protected promptLiquidate(): void {
+    this.confirmLiquidateOpen.set(true);
+  }
+
+  protected onLiquidateConfirmed(confirmed: boolean): void {
+    this.confirmLiquidateOpen.set(false);
+    if (!confirmed) return;
+    const roomId = this.roomId();
+    const edition = this.edition();
+    const me = this.requireCurrentPlayer();
+    const totalCash = this.liquidatePlan()?.totalCash ?? 0;
+    if (!roomId || !edition) return;
+    this.runOp(
+      () => this.liquidation.liquidateAll(roomId, edition, me).then(() => undefined),
+      {
+        message: 'Activos liquidados',
+        detail: `Recibiste +${this.formatScaled(totalCash)} en efectivo`,
+        sound: 'cashIn',
+      },
+    );
+  }
+
   protected onProposeTrade(data: {
     toId: string;
     fromCash: number;
@@ -780,6 +812,16 @@ export class GameComponent {
         this.soundService.play('notify');
         break;
       }
+      case 'liquidation': {
+        const recipientId = entry.toPlayerId;
+        if (recipientId === myId) return;
+        this.toastService.info(
+          `${this.playerName(recipientId)} liquidó sus activos`,
+          `+${this.formatScaled(entry.amount)} en efectivo`,
+        );
+        this.soundService.play('notify');
+        break;
+      }
       case 'bank-payment': {
         const actorIdMeta = entry.metadata?.['actorId'] as string | undefined;
         const recipientId = entry.toPlayerId;
@@ -802,20 +844,20 @@ export class GameComponent {
     }
   }
 
-  private format(amount: number): string {
+  protected format(amount: number): string {
     const currency = this.edition()?.currency;
     if (!currency) return `${amount}`;
     const symbol = currency.symbol;
     return `${symbol}${amount.toLocaleString('es-ES')}`;
   }
 
-  private formatScaled(amount: number): string {
+  protected formatScaled(amount: number): string {
     const currency = this.edition()?.currency;
     if (!currency) return `${amount}`;
     return this.moneyFormatter.format(amount, currency);
   }
 
-  private formatExact(amount: number): string {
+  protected formatExact(amount: number): string {
     const currency = this.edition()?.currency;
     if (!currency) return `${amount}`;
     return this.moneyFormatter.formatExact(amount, currency);

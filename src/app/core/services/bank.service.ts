@@ -204,29 +204,45 @@ export class BankService {
     });
   }
 
+  private cancelPendingTrades(room: Room, playerId: string): Room['trades'] {
+    return room.trades.map((trade) =>
+      trade.status === 'pending' &&
+      (trade.fromPlayerId === playerId || trade.toPlayerId === playerId)
+        ? { ...trade, status: 'cancelled' as const, resolvedAt: Date.now() }
+        : trade,
+    );
+  }
+
   declareBankruptcy(roomId: string, playerId: string): Promise<void> {
     this.ensureActor(playerId);
     return this.gameState.runInTransaction(roomId, (room) => {
       const player = this.requirePlayer(room, playerId);
+      const returnedPropertyIds = player.properties.map((pp) => pp.propertyId);
       const players = room.players.map((p) =>
-        p.id === playerId ? { ...p, cash: 0, bankrupt: true } : p,
+        p.id === playerId
+          ? { ...p, cash: 0, bankrupt: true, properties: [] }
+          : p,
       );
+      const trades = this.cancelPendingTrades(room, playerId);
+
       const bankruptcyLog = this.buildLog(
         'bankruptcy',
         0,
         `${player.name} se ha declarado en quiebra`,
         playerId,
         'bank',
-        player.properties.map((pp) => pp.propertyId),
-        { bankAction: 'bankruptcy' },
+        returnedPropertyIds,
+        { bankAction: 'bankruptcy', returnedPropertyCount: returnedPropertyIds.length },
       );
 
       const activePlayers = players.filter((p) => !p.bankrupt);
       const shouldFinish = room.status === 'playing' && activePlayers.length === 1;
       const winner = shouldFinish ? activePlayers[0] : undefined;
 
+      const nextRoom: Room = { ...room, players, trades, log: [...room.log, bankruptcyLog] };
+
       if (!shouldFinish) {
-        return { ...room, players, log: [...room.log, bankruptcyLog] };
+        return nextRoom;
       }
 
       const finishLog = this.buildLog(
@@ -240,11 +256,10 @@ export class BankService {
       );
 
       return {
-        ...room,
-        players,
+        ...nextRoom,
         status: 'finished',
         finishedAt: Date.now(),
-        log: [...room.log, bankruptcyLog, finishLog],
+        log: [...nextRoom.log, finishLog],
       };
     });
   }

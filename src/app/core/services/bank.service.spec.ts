@@ -112,6 +112,48 @@ describe('BankService guards', () => {
     expect(bankruptcyLog).toMatchObject({ metadata: { bankAction: 'bankruptcy' }, type: 'bankruptcy' });
   });
 
+  it('returns all properties to the bank when declaring bankruptcy', async () => {
+    let savedRoom: Room | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room: Room = {
+        ...makeRoom(),
+        players: [
+          { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 1500, properties: [{ propertyId: 'p1', houses: 2, hasHotel: false, mortgaged: true }], bankrupt: false, host: true, joinedAt: 0 },
+          { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+        ],
+      };
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedRoom = room;
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    const bankrupt = savedRoom?.players.find((p) => p.id === 'u1');
+    expect(bankrupt?.properties).toEqual([]);
+    expect(bankrupt?.cash).toBe(0);
+    expect(bankrupt?.bankrupt).toBe(true);
+  });
+
+  it('cancels pending trades involving the bankrupt player', async () => {
+    let savedRoom: Room | undefined;
+    runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+      const room: Room = {
+        ...makeRoom(),
+        trades: [
+          { id: 't1', status: 'pending', fromPlayerId: 'u1', toPlayerId: 'u2', fromItems: { cash: 0, propertyIds: [] }, toItems: { cash: 0, propertyIds: [] }, createdAt: 0 },
+          { id: 't2', status: 'pending', fromPlayerId: 'u2', toPlayerId: 'u1', fromItems: { cash: 0, propertyIds: [] }, toItems: { cash: 0, propertyIds: [] }, createdAt: 0 },
+          { id: 't3', status: 'pending', fromPlayerId: 'u2', toPlayerId: 'bank', fromItems: { cash: 0, propertyIds: [] }, toItems: { cash: 0, propertyIds: [] }, createdAt: 0 },
+        ],
+      };
+      const next = mutator(room);
+      if (next) Object.assign(room, next);
+      savedRoom = room;
+    });
+    await service.declareBankruptcy('ROOM', 'u1');
+    expect(savedRoom?.trades.find((t) => t.id === 't1')?.status).toBe('cancelled');
+    expect(savedRoom?.trades.find((t) => t.id === 't2')?.status).toBe('cancelled');
+    expect(savedRoom?.trades.find((t) => t.id === 't3')?.status).toBe('pending');
+  });
+
   it('finishes the game when bankruptcy leaves only one player standing', async () => {
     let savedRoom: Room | undefined;
     runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {

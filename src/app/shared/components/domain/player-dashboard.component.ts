@@ -6,6 +6,7 @@ import type {
   PropertyMetadata,
   TransactionLogEntry,
 } from '../../../core/models';
+import { LiquidationService } from '../../../core/services/liquidation.service';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { PropertyRowComponent } from './property-row.component';
 import { EmptyStateComponent } from '../ui/empty-state.component';
@@ -20,6 +21,7 @@ import { ICONS } from '../../icons';
 })
 export class PlayerDashboardComponent {
   private readonly formatter = inject(MoneyFormatService);
+  private readonly liquidation = inject(LiquidationService);
 
   readonly me = input.required<Player>();
   readonly players = input.required<Player[]>();
@@ -32,6 +34,7 @@ export class PlayerDashboardComponent {
   readonly salaryAction = output<void>();
   readonly taxAction = output<'income' | 'luxury'>();
   readonly bankruptcyAction = output<void>();
+  readonly liquidateAction = output<void>();
   readonly propertyClick = output<PropertyMetadata>();
 
   protected readonly icons = ICONS as Record<string, string>;
@@ -93,5 +96,15 @@ export class PlayerDashboardComponent {
       }))
       .filter((x): x is { owned: typeof x.owned; meta: NonNullable<typeof x.meta> } => !!x.meta)
       .sort((a, b) => a.meta.order - b.meta.order),
+  );
+
+  protected liquidationPlan = computed(() =>
+    this.liquidation.plan(this.me(), this.edition()),
+  );
+
+  protected canLiquidate = computed(() => this.liquidationPlan().totalCash > 0);
+
+  protected formattedLiquidationTotal = computed(() =>
+    this.formatter.format(this.liquidationPlan().totalCash, this.currency()),
   );
 }

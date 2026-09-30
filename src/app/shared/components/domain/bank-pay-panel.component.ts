@@ -16,6 +16,8 @@ export class BankPayPanelComponent {
   readonly players = input.required<Player[]>();
   readonly currency = input.required<CurrencyConfig>();
   readonly edition = input.required<Edition>();
+  readonly me = input.required<Player>();
+  readonly isHost = input.required<boolean>();
   readonly amount = model(0);
   readonly reason = model('');
   readonly payAction = output<{ toId: string; amount: number; reason: string }>();
@@ -36,19 +38,20 @@ export class BankPayPanelComponent {
     return unique.sort((a, b) => b - a).slice(0, 4);
   });
 
-  protected selectedTo = computed(() => {
+  protected recipient = computed(() => {
+    if (!this.isHost()) return this.me();
     const id = this.toId();
     if (!id) return undefined;
     return this.players().find((p) => p.id === id);
   });
 
   protected finalBalance = computed(() => {
-    const player = this.selectedTo();
+    const player = this.recipient();
     if (!player) return this.amount();
     return player.cash + this.amount();
   });
 
-  protected canSubmit = computed(() => this.amount() > 0 && !!this.toId());
+  protected canSubmit = computed(() => this.amount() > 0 && !!this.recipient());
 
   protected onReasonInput(value: string): void {
     this.reason.set(value);
@@ -67,10 +70,10 @@ export class BankPayPanelComponent {
   }
 
   submit(): void {
-    const to = this.toId();
+    const to = this.recipient();
     if (!to) return;
     this.payAction.emit({
-      toId: to,
+      toId: to.id,
       amount: this.amount(),
       reason: this.reason() || 'Pago del Banco',
     });

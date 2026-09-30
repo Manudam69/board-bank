@@ -314,7 +314,7 @@
 
 <app-modal
   [open]="activeAction() === 'bank-payment'"
-  title="Pagar desde el Banco"
+  [title]="isHost() ? 'Pagar desde el Banco' : 'Recibir dinero del Banco'"
   size="md"
   (closeAction)="closeAction()"
 >
@@ -323,6 +323,8 @@
       [players]="room()!.players"
       [currency]="edition()!.currency"
       [edition]="edition()!"
+      [me]="currentPlayer()!"
+      [isHost]="isHost()"
       (payAction)="onBankPay($event)"
     />
   }

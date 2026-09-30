@@ -29,6 +29,8 @@ describe('BankPayPanelComponent', () => {
     fixture.componentRef.setInput('players', makePlayers());
     fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
     fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
+    fixture.componentRef.setInput('me', makePlayers()[0]);
+    fixture.componentRef.setInput('isHost', true);
     fixture.detectChanges();
   });
 
@@ -123,5 +125,56 @@ describe('BankPayPanelComponent', () => {
 
     expect(fixture.componentInstance['toId']()).toBeUndefined();
     expect(fixture.componentInstance.amount()).toBe(0);
+  });
+
+  it('for non-host hides player selector and pays only to self', async () => {
+    const players = makePlayers();
+    fixture.componentRef.setInput('me', players[1]);
+    fixture.componentRef.setInput('isHost', false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const radios = fixture.nativeElement.querySelectorAll('[role="radio"]');
+    expect(radios.length).toBe(0);
+
+    const destinationText = fixture.nativeElement.textContent;
+    expect(destinationText).toContain('Ben');
+
+    const chip = Array.from(
+      fixture.nativeElement.querySelectorAll('[role="group"] button'),
+    )[0] as HTMLElement;
+    chip.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const emitted: { toId: string; amount: number; reason: string }[] = [];
+    const sub = fixture.componentInstance.payAction.subscribe((e) => emitted.push(e));
+
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].toId).toBe('u2');
+    expect(emitted[0].amount).toBeGreaterThan(0);
+
+    const button = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
+    expect(button.textContent).toContain('Recibir dinero');
+
+    sub.unsubscribe();
+  });
+
+  it('for host shows player selector and pay button labeled Enviar dinero', async () => {
+    const players = makePlayers();
+    fixture.componentRef.setInput('me', players[0]);
+    fixture.componentRef.setInput('isHost', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const radios = fixture.nativeElement.querySelectorAll('[role="radio"]');
+    expect(radios.length).toBeGreaterThan(0);
+
+    const button = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
+    expect(button.textContent).toContain('Enviar dinero');
   });
 });

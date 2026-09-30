@@ -26,15 +26,17 @@ function makeRoom(): Room {
 describe('BankService guards', () => {
   let service: BankService;
   let runInTransactionMock: ReturnType<typeof vi.fn>;
+  let authUserId = 'u1';
 
   beforeEach(() => {
+    authUserId = 'u1';
     runInTransactionMock = vi.fn(async (_roomId: string, mutator: (room: Room) => Room | null) => {
       const room = makeRoom();
       const next = mutator(room);
       if (next) Object.assign(room, next);
     });
 
-    const auth = { userId: () => 'u1', ready: () => true, error: () => null } as unknown as AuthService;
+    const auth = { userId: () => authUserId, ready: () => true, error: () => null } as unknown as AuthService;
 
     TestBed.configureTestingModule({
       providers: [
@@ -418,6 +420,57 @@ describe('BankService guards', () => {
       });
 
       return expect(service.bankPayTo('ROOM', 'u2', 100, 'X')).rejects.toThrow('El jugador está en quiebra');
+    });
+
+    it('allows a non-host to pay to themselves', async () => {
+      authUserId = 'u2';
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.bankPayTo('ROOM', 'u2', 500, 'Bono');
+
+      const u2 = savedRoom?.players.find((p) => p.id === 'u2');
+      const log = savedRoom?.log.at(-1);
+      expect(u2?.cash).toBe(1500);
+      expect(log).toMatchObject({
+        type: 'bank-payment',
+        amount: 500,
+        toPlayerId: 'u2',
+        metadata: { bankAction: 'bank-payment', actorId: 'u2' },
+      });
+    });
+
+    it('rejects a non-host trying to pay another player', () => {
+      authUserId = 'u2';
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      return expect(service.bankPayTo('ROOM', 'u1', 100, 'X')).rejects.toThrow(
+        'Solo el anfitrión puede enviar dinero del Banco a otros jugadores',
+      );
+    });
+
+    it('rejects an actor that is not a player in the room', () => {
+      authUserId = 'u99';
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      return expect(service.bankPayTo('ROOM', 'u1', 100, 'X')).rejects.toThrow('No estás en esta sala');
     });
   });
 });

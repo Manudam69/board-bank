@@ -28,11 +28,27 @@
       <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['arrow-down']" />
     </svg>
 
-    <div class="flex-1 rounded-xl border border-dashed border-border bg-surface-elevated/30 p-3">
+    <div
+      class="flex-1 rounded-xl border p-3"
+      [class.border-border]="recipient()"
+      [class.bg-surface-elevated/50]="recipient()"
+      [class.border-dashed]="!recipient()"
+      [class.border-border]="!recipient()"
+      [class.bg-surface-elevated/30]="!recipient()"
+    >
       <p class="text-xs font-medium text-text-secondary">Destino</p>
       <p class="truncate text-sm font-semibold text-text">
-        @if (selectedTo(); as to) {
-          {{ to.name }}
+        @if (recipient(); as to) {
+          <span class="inline-flex items-center gap-2">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+              [class]="to.avatarColor"
+              aria-hidden="true"
+            >
+              {{ to.name.charAt(0).toUpperCase() }}
+            </span>
+            <span class="truncate">{{ to.name }}</span>
+          </span>
         } @else {
           <span class="text-text-muted">Selecciona jugador</span>
         }
@@ -40,37 +56,40 @@
     </div>
   </div>
 
-  <div class="space-y-2">
-    <p class="text-sm font-medium text-text-secondary">Jugador</p>
-    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Jugador que recibe">
-      @for (target of eligibleTo(); track target.id) {
-        <button
-          type="button"
-          role="radio"
-          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
-          [class.border-accent]="toId() === target.id"
-          [class.bg-accent-muted]="toId() === target.id"
-          [class.text-text]="toId() === target.id"
-          [class.border-border]="toId() !== target.id"
-          [class.bg-surface-elevated]="toId() !== target.id"
-          [class.text-text-secondary]="toId() !== target.id"
-          [class.hover:bg-surface-hover]="toId() !== target.id"
-          [attr.aria-checked]="toId() === target.id"
-          (click)="selectTo(target.id)"
-        >
-          <span
-            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-            [style.background-color]="target.avatarColor"
+  @if (isHost()) {
+    <div class="space-y-2">
+      <p class="text-sm font-medium text-text-secondary">Jugador</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Jugador que recibe">
+        @for (target of eligibleTo(); track target.id) {
+          <button
+            type="button"
+            role="radio"
+            class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
+            [class.border-accent]="toId() === target.id"
+            [class.bg-accent-muted]="toId() === target.id"
+            [class.text-text]="toId() === target.id"
+            [class.border-border]="toId() !== target.id"
+            [class.bg-surface-elevated]="toId() !== target.id"
+            [class.text-text-secondary]="toId() !== target.id"
+            [class.hover:bg-surface-hover]="toId() !== target.id"
+            [attr.aria-checked]="toId() === target.id"
+            (click)="selectTo(target.id)"
           >
-            {{ target.name.charAt(0).toUpperCase() }}
-          </span>
-          <span class="truncate max-w-[8rem]">{{ target.name }}</span>
-        </button>
-      } @empty {
-        <p class="text-sm text-text-muted">No hay jugadores disponibles.</p>
-      }
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+              [class]="target.avatarColor"
+              aria-hidden="true"
+            >
+              {{ target.name.charAt(0).toUpperCase() }}
+            </span>
+            <span class="truncate max-w-[8rem]">{{ target.name }}</span>
+          </button>
+        } @empty {
+          <p class="text-sm text-text-muted">No hay jugadores disponibles.</p>
+        }
+      </div>
     </div>
-  </div>
+  }
 
   <app-amount-input
     [(amount)]="amount"
@@ -104,7 +123,7 @@
     </div>
   }
 
-  @if (amount() > 0 && selectedTo(); as to) {
+  @if (amount() > 0 && recipient(); as to) {
     <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm">
       <p class="text-text-secondary">
         {{ to.name }} recibe
@@ -135,6 +154,10 @@
   </div>
 
   <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    Confirmar pago
+    @if (isHost()) {
+      Enviar dinero
+    } @else {
+      Recibir dinero
+    }
   </app-button>
 </div>

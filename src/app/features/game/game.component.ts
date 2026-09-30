@@ -589,14 +589,17 @@ export class GameComponent {
 
   protected onBankPay(data: { toId: string; amount: number; reason: string }): void {
     const roomId = this.roomId();
-    if (!roomId) return;
-    const toName = this.room()?.players.find((p) => p.id === data.toId)?.name ?? '';
+    const me = this.currentPlayer();
+    if (!roomId || !me) return;
+    const isSelf = data.toId === me.id;
     this.runOp(
       () => this.bank.bankPayTo(roomId, data.toId, data.amount, data.reason),
       {
-        message: 'Pago del Banco enviado',
-        detail: `${toName} recibió ${this.formatScaled(data.amount)}`,
-        sound: 'transfer',
+        message: isSelf ? 'Dinero recibido del Banco' : 'Pago del Banco enviado',
+        detail: isSelf
+          ? `Recibiste ${this.formatScaled(data.amount)}`
+          : `${this.room()?.players.find((p) => p.id === data.toId)?.name ?? ''} recibió ${this.formatScaled(data.amount)}`,
+        sound: isSelf ? 'cashIn' : 'transfer',
       },
     );
   }

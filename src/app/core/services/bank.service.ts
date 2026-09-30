@@ -215,6 +215,13 @@ export class BankService {
     if (!actorId) throw new Error('No estás autenticado');
 
     return this.gameState.runInTransaction(roomId, (room) => {
+      const actor = room.players.find((p) => p.id === actorId);
+      if (!actor) throw new Error('No estás en esta sala');
+
+      if (actor.id !== room.hostId && toPlayerId !== actor.id) {
+        throw new Error('Solo el anfitrión puede enviar dinero del Banco a otros jugadores');
+      }
+
       const to = this.requirePlayer(room, toPlayerId);
 
       const players = room.players.map((p) =>

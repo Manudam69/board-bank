@@ -146,6 +146,7 @@ export class GameComponent {
   readonly joining = signal(false);
   readonly activeTab = signal('me');
   readonly activeAction = signal<BankAction | null>(null);
+  readonly rentContextPlayerId = signal<string | undefined>(undefined);
   readonly busy = signal(false);
   readonly confirmBankruptcyOpen = signal(false);
   readonly confirmLiquidateOpen = signal(false);
@@ -288,12 +289,19 @@ export class GameComponent {
   }
 
   protected openAction(action: BankAction): void {
+    this.rentContextPlayerId.set(undefined);
     this.activeAction.set(action);
+  }
+
+  protected openRentFor(playerId: string): void {
+    this.rentContextPlayerId.set(playerId);
+    this.activeAction.set('rent');
   }
 
   protected closeAction(): void {
     this.activeAction.set(null);
     this.buildContextPropertyId.set(undefined);
+    this.rentContextPlayerId.set(undefined);
   }
 
   private async runOp(

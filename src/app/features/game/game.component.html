@@ -165,6 +165,7 @@
               (jailFineAction)="promptJailFine()"
               (bankruptcyAction)="promptBankruptcy()"
               (propertyClick)="openPropertyDetail($event)"
+              (playerClick)="openRentFor($event.id)"
             />
           }
 
@@ -176,6 +177,7 @@
                   [currency]="edition()!.currency"
                   [edition]="edition()!"
                   [isHostView]="true"
+                  (selectAction)="openRentFor($event.id)"
                 />
               }
             </div>
@@ -298,12 +300,13 @@
   [flushBottom]="true"
   (closeAction)="closeAction()"
 >
-  @if (room() && edition() && currentPlayer()) {
+  @if (room() && edition() && currentPlayer() && activeAction() === 'rent') {
     <app-rent-panel
       [room]="room()!"
       [me]="currentPlayer()!"
       [edition]="edition()!"
       [currency]="edition()!.currency"
+      [initialToId]="rentContextPlayerId()"
       (rentAction)="onRent($event)"
     />
   }

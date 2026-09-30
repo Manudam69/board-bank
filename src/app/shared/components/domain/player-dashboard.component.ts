@@ -37,6 +37,7 @@ export class PlayerDashboardComponent {
   readonly bankruptcyAction = output<void>();
   readonly liquidateAction = output<void>();
   readonly propertyClick = output<PropertyMetadata>();
+  readonly playerClick = output<Player>();
 
   protected readonly icons = ICONS as Record<string, string>;
 

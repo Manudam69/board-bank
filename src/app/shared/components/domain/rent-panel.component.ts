@@ -37,6 +37,7 @@ export class RentPanelComponent implements OnInit {
   readonly edition = input.required<Edition>();
   readonly currency = input.required<CurrencyConfig>();
   readonly rentAction = output<{ toId: string; propertyId: string; amount: number }>();
+  readonly initialToId = input<string | undefined>(undefined);
 
   protected selectedToId = model<string | undefined>(undefined);
   protected selectedProperty = model<PropertyMetadata | undefined>(undefined);
@@ -134,7 +135,12 @@ export class RentPanelComponent implements OnInit {
 
   ngOnInit(): void {
     const list = this.receivers();
-    if (list.length === 1) {
+    const initial = this.initialToId();
+    const initialReceiver = initial ? list.find((r) => r.id === initial) : undefined;
+
+    if (initialReceiver) {
+      this.selectedToId.set(initialReceiver.id);
+    } else if (list.length === 1) {
       this.selectedToId.set(list[0].id);
     }
   }

@@ -245,4 +245,83 @@ describe('RentPanelComponent', () => {
     const payButton = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
     expect(payButton.disabled).toBe(true);
   });
+
+  it('pre-selects initialToId when it is a valid receiver', async () => {
+    const ana: Player = {
+      id: 'owner-ana',
+      name: 'Ana',
+      avatarColor: '#00ff00',
+      cash: 1000,
+      bankrupt: false,
+      host: false,
+      joinedAt: 0,
+      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
+    };
+    const ben: Player = {
+      id: 'owner-ben',
+      name: 'Ben',
+      avatarColor: '#0000ff',
+      cash: 1000,
+      bankrupt: false,
+      host: false,
+      joinedAt: 0,
+      properties: [{ propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: false }],
+    };
+    const fixture = TestBed.createComponent(RentPanelComponent);
+    fixture.componentRef.setInput('room', makeRoom([me, ana, ben]));
+    fixture.componentRef.setInput('me', me);
+    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
+    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
+    fixture.componentRef.setInput('initialToId', 'owner-ben');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const selectedButton = fixture.nativeElement.querySelector('[role="radio"][aria-checked="true"]') as HTMLElement | null;
+    expect(selectedButton?.textContent).toContain('Ben');
+    expect(fixture.nativeElement.textContent).toContain('1 disponibles');
+  });
+
+  it('falls back to no preselection when initialToId is not a valid receiver', async () => {
+    const owner: Player = {
+      id: 'owner',
+      name: 'Ana',
+      avatarColor: '#00ff00',
+      cash: 1000,
+      bankrupt: false,
+      host: false,
+      joinedAt: 0,
+      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
+    };
+    const secondOwner: Player = {
+      id: 'owner-2',
+      name: 'Ben',
+      avatarColor: '#ff0000',
+      cash: 1000,
+      bankrupt: false,
+      host: false,
+      joinedAt: 0,
+      properties: [{ propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: false }],
+    };
+    const broke: Player = {
+      id: 'broke',
+      name: 'Luis',
+      avatarColor: '#0000ff',
+      cash: 0,
+      bankrupt: false,
+      host: false,
+      joinedAt: 0,
+      properties: [{ propertyId: 'p3', houses: 0, hasHotel: false, mortgaged: true }],
+    };
+    const fixture = TestBed.createComponent(RentPanelComponent);
+    fixture.componentRef.setInput('room', makeRoom([me, owner, secondOwner, broke]));
+    fixture.componentRef.setInput('me', me);
+    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
+    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
+    fixture.componentRef.setInput('initialToId', 'broke');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const selectedButton = fixture.nativeElement.querySelector('[role="radio"][aria-checked="true"]') as HTMLElement | null;
+    expect(selectedButton).toBeNull();
+  });
 });

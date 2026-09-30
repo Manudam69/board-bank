@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import type { Player, Room, TransactionLogEntry } from '../models';
+import type { Edition, Player, Room, TransactionLogEntry } from '../models';
 import { AuthService } from './auth.service';
 import { GameStateService } from './game-state.service';
 import { IdService } from './id.service';
+import { LiquidationService } from './liquidation.service';
+import { distributeProportionally } from '../utils/distribute-proportionally';
 
 export interface TransferMultiMetadata {
   transferGroupId: string;
@@ -12,11 +14,22 @@ export interface TransferMultiMetadata {
   totalAmount: number;
 }
 
+export interface BankruptcyCreditor {
+  playerId: string;
+  owed: number;
+}
+
+export interface BankruptcySettlement {
+  edition: Edition;
+  creditors: BankruptcyCreditor[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class BankService {
   private readonly gameState = inject(GameStateService);
   private readonly id = inject(IdService);
   private readonly auth = inject(AuthService);
+  private readonly liquidation = inject(LiquidationService);
 
   private buildLog(
     type: TransactionLogEntry['type'],
@@ -251,26 +264,66 @@ export class BankService {
     );
   }
 
-  declareBankruptcy(roomId: string, playerId: string): Promise<void> {
+  declareBankruptcy(
+    roomId: string,
+    playerId: string,
+    settlement?: BankruptcySettlement,
+  ): Promise<void> {
     this.ensureActor(playerId);
     return this.gameState.runInTransaction(roomId, (room) => {
       const player = this.requirePlayer(room, playerId);
       const returnedPropertyIds = player.properties.map((pp) => pp.propertyId);
-      const players = room.players.map((p) =>
-        p.id === playerId
-          ? { ...p, cash: 0, bankrupt: true, properties: [] }
-          : p,
-      );
+
+      let totalAvailable = player.cash;
+      let payments: { playerId: string; amount: number }[] = [];
+
+      if (settlement) {
+        const plan = this.liquidation.plan(player, settlement.edition);
+        totalAvailable += plan.totalCash;
+
+        const weights = settlement.creditors.map((c) => {
+          const creditor = room.players.find((p) => p.id === c.playerId && !p.bankrupt);
+          return creditor && c.owed > 0 ? c.owed : 0;
+        });
+        const totalOwed = weights.reduce((sum, w) => sum + w, 0);
+
+        if (totalOwed > 0 && totalAvailable > 0) {
+          const distribution = distributeProportionally(totalAvailable, weights);
+          payments = settlement.creditors
+            .map((c, index) => ({ playerId: c.playerId, amount: distribution[index].share }))
+            .filter((p) => p.amount > 0);
+        }
+      }
+
+      const paymentMap = new Map(payments.map((p) => [p.playerId, p.amount]));
+
+      const players = room.players.map((p) => {
+        if (p.id === playerId) {
+          return { ...p, cash: 0, bankrupt: true, properties: [] };
+        }
+        const payment = paymentMap.get(p.id);
+        if (payment) {
+          return { ...p, cash: p.cash + payment };
+        }
+        return p;
+      });
+
       const trades = this.cancelPendingTrades(room, playerId);
+      const settledTotal = payments.reduce((sum, p) => sum + p.amount, 0);
 
       const bankruptcyLog = this.buildLog(
         'bankruptcy',
-        0,
+        settledTotal,
         `${player.name} se ha declarado en quiebra`,
         playerId,
         'bank',
         returnedPropertyIds,
-        { bankAction: 'bankruptcy', returnedPropertyCount: returnedPropertyIds.length },
+        {
+          bankAction: 'bankruptcy',
+          returnedPropertyCount: returnedPropertyIds.length,
+          settledTotal,
+          payments,
+        },
       );
 
       const activePlayers = players.filter((p) => !p.bankrupt);

@@ -163,7 +163,7 @@
               (taxAction)="onBankTax($event)"
               (liquidateAction)="promptLiquidate()"
               (jailFineAction)="promptJailFine()"
-              (bankruptcyAction)="promptBankruptcy()"
+               (bankruptcyAction)="openDebtAssist()"
               (propertyClick)="openPropertyDetail($event)"
               (playerClick)="openRentFor($event.id)"
             />
@@ -404,14 +404,7 @@
   }
 </app-modal>
 
-<app-confirm-dialog
-  [open]="confirmBankruptcyOpen()"
-  title="¿Declarar bancarrota?"
-  message="Esta acción no se puede deshacer. Tus propiedades regresarán al Banco quedando libres de hipotecas y construcciones, y saldrás de la partida."
-  confirmLabel="Declarar bancarrota"
-  confirmVariant="danger"
-  (confirmed)="onBankruptcyConfirmed($event)"
-/>
+
 
 <app-confirm-dialog
   [open]="confirmLeaveOpen()"
@@ -564,25 +557,13 @@
   </app-modal>
 }
 
-<app-modal
+<app-debt-assist-flow
   [open]="debtAssistOpen()"
-  title="Deuda asistida"
-  size="lg"
-  [flushBottom]="true"
-  [closeable]="!busy()"
+  [roomId]="roomId() ?? ''"
+  [me]="currentPlayer()!"
+  [edition]="edition()!"
+  [players]="room()!.players"
+  [payment]="debtAssistContext()"
   (closeAction)="closeDebtAssist()"
->
-  @if (room() && edition() && currentPlayer(); as me) {
-    <app-debt-assist-dialog
-      [open]="debtAssistOpen()"
-      [me]="me"
-      [edition]="edition()!"
-      [currency]="edition()!.currency"
-      [payment]="debtAssistContext()"
-      [busy]="busy()"
-      (applyAction)="onApplyDebtPlan($event)"
-      (bankruptcyAction)="onDebtAssistBankruptcy()"
-      (closeAction)="closeDebtAssist()"
-    />
-  }
-</app-modal>
+  (completed)="closeDebtAssist(); closeAction()"
+/>

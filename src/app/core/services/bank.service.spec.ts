@@ -4,7 +4,8 @@ import { BankService } from './bank.service';
 import { GameStateService } from './game-state.service';
 import { AuthService } from './auth.service';
 import { IdService } from './id.service';
-import type { Room } from '../models';
+import { LiquidationService } from './liquidation.service';
+import type { Edition, Room } from '../models';
 
 function makeRoom(): Room {
   return {
@@ -23,13 +24,29 @@ function makeRoom(): Room {
   };
 }
 
+function makeEdition(): Edition {
+  return {
+    id: 'ED',
+    name: 'Test Edition',
+    currency: { code: 'USD', symbol: '$', scale: 'units' },
+    startingMoney: 1500,
+    goSalary: 200,
+    jailFine: 50,
+    incomeTax: 200,
+    luxuryTax: 75,
+    properties: [],
+  };
+}
+
 describe('BankService guards', () => {
   let service: BankService;
   let runInTransactionMock: ReturnType<typeof vi.fn>;
   let authUserId = 'u1';
+  let liquidationPlan: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     authUserId = 'u1';
+    liquidationPlan = vi.fn();
     runInTransactionMock = vi.fn(async (_roomId: string, mutator: (room: Room) => Room | null) => {
       const room = makeRoom();
       const next = mutator(room);
@@ -37,6 +54,7 @@ describe('BankService guards', () => {
     });
 
     const auth = { userId: () => authUserId, ready: () => true, error: () => null } as unknown as AuthService;
+    const liquidation = { plan: liquidationPlan } as unknown as LiquidationService;
 
     TestBed.configureTestingModule({
       providers: [
@@ -44,6 +62,7 @@ describe('BankService guards', () => {
         IdService,
         { provide: GameStateService, useValue: { runInTransaction: runInTransactionMock } },
         { provide: AuthService, useValue: auth },
+        { provide: LiquidationService, useValue: liquidation },
       ],
     });
 
@@ -263,6 +282,158 @@ describe('BankService guards', () => {
     await service.declareBankruptcy('ROOM', 'u1');
     expect(savedRoom?.status).toBe('lobby');
     expect(savedRoom?.finishedAt).toBeUndefined();
+  });
+
+  describe('declareBankruptcy with settlement', () => {
+    it('liquidates all assets and pays a single creditor everything available', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 200, properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        liquidationPlan.mockReturnValue({
+          properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: true }],
+          totalCash: 400,
+          housesSold: 0,
+          hotelsSold: 0,
+          mortgagedIds: ['p1'],
+          propertyCount: 1,
+        });
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.declareBankruptcy('ROOM', 'u1', { edition: makeEdition(), creditors: [{ playerId: 'u2', owed: 1000 }] });
+
+      const ana = savedRoom?.players.find((p) => p.id === 'u1');
+      const ben = savedRoom?.players.find((p) => p.id === 'u2');
+      const log = savedRoom?.log.find((entry) => entry.type === 'bankruptcy');
+
+      expect(ana?.cash).toBe(0);
+      expect(ana?.bankrupt).toBe(true);
+      expect(ana?.properties).toEqual([]);
+      expect(ben?.cash).toBe(1600);
+      expect(log?.amount).toBe(600);
+      expect(log?.metadata).toMatchObject({ settledTotal: 600, payments: [{ playerId: 'u2', amount: 600 }] });
+    });
+
+    it('distributes available cash proportionally among several creditors', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 100, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+            { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        liquidationPlan.mockReturnValue({
+          properties: [],
+          totalCash: 200,
+          housesSold: 0,
+          hotelsSold: 0,
+          mortgagedIds: [],
+          propertyCount: 0,
+        });
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.declareBankruptcy('ROOM', 'u1', {
+        edition: makeEdition(),
+        creditors: [
+          { playerId: 'u2', owed: 300 },
+          { playerId: 'u3', owed: 100 },
+        ],
+      });
+
+      const ben = savedRoom?.players.find((p) => p.id === 'u2');
+      const cora = savedRoom?.players.find((p) => p.id === 'u3');
+      expect(ben?.cash).toBe(1225); // 1000 + 225
+      expect(cora?.cash).toBe(1075); // 1000 + 75
+      expect(savedRoom?.log.find((entry) => entry.type === 'bankruptcy')?.metadata).toMatchObject({
+        settledTotal: 300,
+        payments: expect.arrayContaining([
+          { playerId: 'u2', amount: 225 },
+          { playerId: 'u3', amount: 75 },
+        ]),
+      });
+    });
+
+    it('ignores bankrupt creditors and redistributes their share', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 100, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: true, host: false, joinedAt: 0 },
+            { id: 'u3', name: 'Cora', avatarColor: 'bg-green-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        liquidationPlan.mockReturnValue({
+          properties: [],
+          totalCash: 200,
+          housesSold: 0,
+          hotelsSold: 0,
+          mortgagedIds: [],
+          propertyCount: 0,
+        });
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.declareBankruptcy('ROOM', 'u1', {
+        edition: makeEdition(),
+        creditors: [
+          { playerId: 'u2', owed: 300 },
+          { playerId: 'u3', owed: 300 },
+        ],
+      });
+
+      const ben = savedRoom?.players.find((p) => p.id === 'u2');
+      const cora = savedRoom?.players.find((p) => p.id === 'u3');
+      expect(ben?.cash).toBe(1000);
+      expect(cora?.cash).toBe(1300);
+    });
+
+    it('keeps available cash when no valid creditors are provided', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room: Room = {
+          ...makeRoom(),
+          players: [
+            { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
+            { id: 'u2', name: 'Ben', avatarColor: 'bg-blue-500', cash: 1000, properties: [], bankrupt: false, host: false, joinedAt: 0 },
+          ],
+        };
+        liquidationPlan.mockReturnValue({
+          properties: [],
+          totalCash: 0,
+          housesSold: 0,
+          hotelsSold: 0,
+          mortgagedIds: [],
+          propertyCount: 0,
+        });
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+
+      await service.declareBankruptcy('ROOM', 'u1', { edition: makeEdition(), creditors: [] });
+
+      const ana = savedRoom?.players.find((p) => p.id === 'u1');
+      expect(ana?.cash).toBe(0);
+      expect(savedRoom?.log.find((entry) => entry.type === 'bankruptcy')?.amount).toBe(0);
+    });
   });
 
   describe('transferMulti', () => {

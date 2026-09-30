@@ -260,15 +260,19 @@
         </app-button>
       }
 
-      @if (isRecoveryOnly() && maxRecovery() > 0) {
+      @if (isRecoveryOnly()) {
         <app-button
           class="block"
           [fullWidth]="true"
-          variant="ghost"
+          [variant]="maxRecovery() > 0 ? 'ghost' : 'danger'"
           [disabled]="busy()"
           (clickAction)="requestBankruptcy()"
         >
-          Declarar bancarrota igualmente
+          @if (maxRecovery() > 0) {
+            Declarar bancarrota igualmente
+          } @else {
+            Declarar bancarrota
+          }
         </app-button>
       }
 

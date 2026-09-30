@@ -8,8 +8,8 @@ import { BankService } from '../../core/services/bank.service';
 import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
 import { LiquidationService } from '../../core/services/liquidation.service';
-import { DebtAssistanceService, type DebtPayment } from '../../core/services/debt-assistance.service';
 import { MoneyFormatService } from '../../core/services/money-format.service';
+import { type DebtPayment } from '../../core/services/debt-assistance.service';
 import { PropertyService, unmortgageCost } from '../../core/services/property.service';
 import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
@@ -40,7 +40,7 @@ import { PlayerRowComponent } from '../../shared/components/domain/player-row.co
 import { TradeBuilderComponent } from '../../shared/components/domain/trade-builder.component';
 import { TradeListComponent } from '../../shared/components/domain/trade-list.component';
 import { TransferPanelComponent } from '../../shared/components/domain/transfer-panel.component';
-import { DebtAssistDialogComponent } from '../../shared/components/domain/debt-assist-dialog.component';
+import { DebtAssistFlowComponent } from '../../shared/components/domain/debt-assist-flow.component';
 import { LogFeedComponent } from '../../shared/components/domain/log-feed.component';
 import { mapFirebaseError } from '../../core/utils/firebase-errors';
 import { ICONS } from '../../shared/icons';
@@ -86,7 +86,7 @@ type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'jail-fine' | 'ba
     BuildManagerComponent,
     LogFeedComponent,
     BankActionsBarComponent,
-    DebtAssistDialogComponent,
+    DebtAssistFlowComponent,
   ],
   templateUrl: './game.component.html',
 })
@@ -106,7 +106,6 @@ export class GameComponent {
   private readonly undoService = inject(UndoService);
     private readonly moneyFormatter = inject(MoneyFormatService);
     private readonly liquidation = inject(LiquidationService);
-    private readonly debtAssistance = inject(DebtAssistanceService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -152,7 +151,6 @@ export class GameComponent {
   readonly activeAction = signal<BankAction | null>(null);
   readonly rentContextPlayerId = signal<string | undefined>(undefined);
   readonly busy = signal(false);
-    readonly confirmBankruptcyOpen = signal(false);
     readonly confirmLiquidateOpen = signal(false);
     readonly confirmJailFineOpen = signal(false);
     readonly debtAssistOpen = signal(false);
@@ -359,7 +357,7 @@ export class GameComponent {
     return id;
   }
 
-  private openDebtAssist(payment?: DebtPayment): void {
+  protected openDebtAssist(payment?: DebtPayment): void {
     this.debtAssistContext.set(payment);
     this.debtAssistOpen.set(true);
   }
@@ -369,40 +367,9 @@ export class GameComponent {
     this.debtAssistContext.set(undefined);
   }
 
-  protected onApplyDebtPlan(actionIds: string[]): void {
-    const roomId = this.roomId();
-    const edition = this.edition();
-    const me = this.requireCurrentPlayer();
-    const payment = this.debtAssistContext();
-    if (!roomId || !edition || !payment) return;
-
-    const success: SuccessConfig = {
-      message: 'Pago completado',
-      detail: payment.label,
-      sound: 'cashOut',
-    };
-
-    this.runOp(
-      () => this.debtAssistance.applyPlanAndPay(roomId, edition, me, actionIds, payment),
-      success,
-      true,
-      false,
-    ).then(() => {
-      if (!this.busy()) {
-        this.closeDebtAssist();
-        this.closeAction();
-      }
-    });
-  }
-
-  protected onDebtAssistBankruptcy(): void {
-    this.closeDebtAssist();
-    this.promptBankruptcy();
-  }
-
   private needsAssistance(amount: number): boolean {
     const me = this.currentPlayer();
-    return !!me && this.debtAssistance.needsAssistance(me, amount);
+    return !!me && !me.bankrupt && amount > me.cash;
   }
 
   protected onTransfer(data: { toIds: (string | 'bank')[]; amountPerPlayer: number; reason: string }): void {
@@ -728,28 +695,6 @@ export class GameComponent {
     );
   }
 
-  protected promptBankruptcy(): void {
-    const recovery = this.liquidatePlan()?.totalCash ?? 0;
-    if (recovery > 0) {
-      this.openDebtAssist();
-      return;
-    }
-    this.confirmBankruptcyOpen.set(true);
-  }
-
-  protected onBankruptcyConfirmed(confirmed: boolean): void {
-    this.confirmBankruptcyOpen.set(false);
-    if (!confirmed) return;
-    const roomId = this.roomId();
-    const me = this.requireCurrentPlayer();
-    if (!roomId) return;
-    this.runOp(() => this.bank.declareBankruptcy(roomId, me), {
-      message: 'Bancarrota declarada',
-      detail: 'Estás fuera de la partida',
-      sound: 'error',
-    });
-  }
-
   protected promptLiquidate(): void {
     this.confirmLiquidateOpen.set(true);
   }
@@ -986,11 +931,21 @@ export class GameComponent {
         break;
       }
       case 'bankruptcy': {
-        this.toastService.info(
-          `${this.playerName(actorId)} se declaró en quiebra`,
-          'Queda fuera de la partida',
-        );
-        this.soundService.play('notify');
+        const payments = entry.metadata?.['payments'] as Array<{ playerId: string; amount: number }> | undefined;
+        const myPayment = payments?.find((p) => p.playerId === myId);
+        if (myPayment && myPayment.amount > 0) {
+          this.toastService.success(
+            `Recibiste ${this.formatScaled(myPayment.amount)} de la bancarrota de ${this.playerName(actorId)}`,
+            'Pago por liquidación de activos',
+          );
+          this.soundService.play('cashIn');
+        } else {
+          this.toastService.info(
+            `${this.playerName(actorId)} se declaró en quiebra`,
+            'Queda fuera de la partida',
+          );
+          this.soundService.play('notify');
+        }
         break;
       }
       case 'liquidation': {

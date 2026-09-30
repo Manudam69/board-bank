@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-type SoundName =
+export type SoundName =
   | 'transfer'
   | 'buy'
   | 'build'

@@ -23,7 +23,6 @@
               [edition]="edition()"
               [selectable]="true"
               [selected]="selectedProperty()?.id === property.id"
-              [disabled]="me().cash < property.price"
               (propertyClick)="onSelect(property)"
             />
           }
@@ -34,7 +33,15 @@
     }
   </div>
 
-  <app-button [fullWidth]="true" [disabled]="!canBuy()" (clickAction)="submit()">
-    Comprar propiedad
+  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
+    @if (selectedProperty(); as p) {
+      @if (me().cash >= p.price) {
+        Comprar {{ p.price | money: currency() }}
+      } @else {
+        Conseguir efectivo y comprar {{ p.price | money: currency() }}
+      }
+    } @else {
+      Selecciona una propiedad
+    }
   </app-button>
 </div>

@@ -243,7 +243,8 @@ describe('RentPanelComponent', () => {
     await fixture.whenStable();
 
     const payButton = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
-    expect(payButton.disabled).toBe(true);
+    expect(payButton.disabled).toBe(false);
+    expect(payButton.textContent?.trim()).toContain('Conseguir efectivo');
   });
 
   it('pre-selects initialToId when it is a valid receiver', async () => {

@@ -26,10 +26,7 @@ export class BuyPropertyPanelComponent {
     return this.edition().properties.filter((p) => !ownedIds.has(p.id));
   });
 
-  protected canBuy = computed(() => {
-    const property = this.selectedProperty();
-    return !!property && this.me().cash >= property.price;
-  });
+  protected canSubmit = computed(() => !!this.selectedProperty());
 
   protected groupedProperties = computed(() => {
     const map = new Map<string, PropertyMetadata[]>();

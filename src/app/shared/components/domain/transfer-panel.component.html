@@ -197,7 +197,11 @@
 
   <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
     @if (total() > 0) {
-      Transferir {{ formatter.formatExact(total(), currency()) }}
+      @if (insufficient()) {
+        Conseguir efectivo y transferir {{ formatter.formatExact(total(), currency()) }}
+      } @else {
+        Transferir {{ formatter.formatExact(total(), currency()) }}
+      }
     } @else {
       Transferir
     }

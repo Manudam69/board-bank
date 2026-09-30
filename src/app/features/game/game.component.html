@@ -489,14 +489,20 @@
             Disponible: <span class="font-medium text-text">{{ formatScaled(me.cash) }}</span>
           </p>
 
-          <div class="flex justify-end gap-3 pt-2">
-            <app-button variant="ghost" [disabled]="busy()" (clickAction)="confirmJailFineOpen.set(false)">Volver</app-button>
-            <app-button
-              variant="primary"
-              [disabled]="true"
-            >
-              Pagar {{ formatScaled(jailFineAmount()) }}
-            </app-button>
+          <div class="flex flex-col gap-3 pt-2">
+            <p class="text-xs text-text-secondary">
+              Puedes conseguir efectivo vendiendo construcciones o hipotecando propiedades.
+            </p>
+            <div class="flex justify-end gap-3">
+              <app-button variant="ghost" [disabled]="busy()" (clickAction)="confirmJailFineOpen.set(false)">Volver</app-button>
+              <app-button
+                variant="primary"
+                [disabled]="busy()"
+                (clickAction)="onJailFineConfirmed(true)"
+              >
+                Conseguir efectivo
+              </app-button>
+            </div>
           </div>
         }
       </div>
@@ -557,3 +563,26 @@
     </div>
   </app-modal>
 }
+
+<app-modal
+  [open]="debtAssistOpen()"
+  title="Deuda asistida"
+  size="lg"
+  [flushBottom]="true"
+  [closeable]="!busy()"
+  (closeAction)="closeDebtAssist()"
+>
+  @if (room() && edition() && currentPlayer(); as me) {
+    <app-debt-assist-dialog
+      [open]="debtAssistOpen()"
+      [me]="me"
+      [edition]="edition()!"
+      [currency]="edition()!.currency"
+      [payment]="debtAssistContext()"
+      [busy]="busy()"
+      (applyAction)="onApplyDebtPlan($event)"
+      (bankruptcyAction)="onDebtAssistBankruptcy()"
+      (closeAction)="closeDebtAssist()"
+    />
+  }
+</app-modal>

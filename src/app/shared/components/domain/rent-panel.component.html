@@ -160,11 +160,15 @@
       class="mt-4 block"
       [fullWidth]="true"
       size="lg"
-      [disabled]="!canPay() || !isValidDice()"
+      [disabled]="!selectedToId() || !selectedProperty() || !isValidDice()"
       (clickAction)="submit()"
     >
       @if (rentInfo(); as info) {
-        Pagar {{ info.amount | money: currency() }}
+        @if (canPay()) {
+          Pagar {{ info.amount | money: currency() }}
+        } @else {
+          Conseguir efectivo y pagar {{ info.amount | money: currency() }}
+        }
       } @else {
         Pagar renta
       }

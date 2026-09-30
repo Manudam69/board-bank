@@ -33,6 +33,7 @@ export class PlayerDashboardComponent {
 
   readonly salaryAction = output<void>();
   readonly taxAction = output<'income' | 'luxury'>();
+  readonly jailFineAction = output<void>();
   readonly bankruptcyAction = output<void>();
   readonly liquidateAction = output<void>();
   readonly propertyClick = output<PropertyMetadata>();
@@ -106,5 +107,21 @@ export class PlayerDashboardComponent {
 
   protected formattedLiquidationTotal = computed(() =>
     this.formatter.format(this.liquidationPlan().totalCash, this.currency()),
+  );
+
+  protected formattedJailFine = computed(() =>
+    this.formatter.format(this.edition().jailFine, this.currency()),
+  );
+
+  protected formattedGoSalary = computed(() =>
+    this.formatter.format(this.edition().goSalary, this.currency()),
+  );
+
+  protected formattedIncomeTax = computed(() =>
+    this.formatter.format(this.edition().incomeTax, this.currency()),
+  );
+
+  protected formattedLuxuryTax = computed(() =>
+    this.formatter.format(this.edition().luxuryTax, this.currency()),
   );
 }

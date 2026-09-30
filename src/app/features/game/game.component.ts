@@ -55,7 +55,7 @@ interface SuccessConfig {
   sound: 'transfer' | 'buy' | 'build' | 'cashIn' | 'cashOut' | 'error' | 'salary' | 'notify';
 }
 
-type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'bankruptcy' | 'bank-payment' | 'liquidation' | undefined;
+type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'jail-fine' | 'bankruptcy' | 'bank-payment' | 'liquidation' | undefined;
 
 @Component({
   selector: 'app-game',
@@ -121,6 +121,14 @@ export class GameComponent {
     return this.room()?.players.find((player) => player.id === userId);
   });
 
+  readonly jailFineAmount = computed(() => this.edition()?.jailFine ?? 0);
+
+  readonly canPayJailFine = computed(() => {
+    const player = this.currentPlayer();
+    const fine = this.jailFineAmount();
+    return !!player && player.cash >= fine;
+  });
+
   readonly liquidatePlan = computed(() => {
     const player = this.currentPlayer();
     const edition = this.edition();
@@ -141,6 +149,7 @@ export class GameComponent {
   readonly busy = signal(false);
   readonly confirmBankruptcyOpen = signal(false);
   readonly confirmLiquidateOpen = signal(false);
+  readonly confirmJailFineOpen = signal(false);
   readonly confirmLeaveOpen = signal(false);
   readonly confirmFinishOpen = signal(false);
   readonly confirmCancelTradeOpen = signal(false);
@@ -546,6 +555,30 @@ export class GameComponent {
     );
   }
 
+  protected promptJailFine(): void {
+    this.confirmJailFineOpen.set(true);
+  }
+
+  protected onJailFineConfirmed(confirmed: boolean): void {
+    this.confirmJailFineOpen.set(false);
+    if (!confirmed) return;
+
+    const roomId = this.roomId();
+    const edition = this.edition();
+    const me = this.requireCurrentPlayer();
+    if (!roomId || !edition) return;
+
+    this.runOp(
+      () => this.bank.payJailFine(roomId, me, edition.jailFine),
+      {
+        message: 'Fianza de cárcel pagada',
+        detail: `−${this.formatScaled(edition.jailFine)}`,
+        sound: 'cashOut',
+      },
+      true,
+    );
+  }
+
   protected onBankPay(data: { toId: string; amount: number; reason: string }): void {
     const roomId = this.roomId();
     if (!roomId) return;
@@ -800,6 +833,14 @@ export class GameComponent {
         this.toastService.info(
           `${this.playerName(actorId)} pagó ${taxLabel.toLowerCase()}`,
           `-${this.format(entry.amount)}`,
+        );
+        this.soundService.play('notify');
+        break;
+      }
+      case 'jail-fine': {
+        this.toastService.info(
+          `${this.playerName(actorId)} pagó la fianza de cárcel`,
+          `-${this.formatScaled(entry.amount)}`,
         );
         this.soundService.play('notify');
         break;

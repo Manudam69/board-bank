@@ -113,16 +113,19 @@
           </span>
           Cobrar sueldo
         </span>
-        <svg
-          class="h-5 w-5 text-text-muted"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
-        </svg>
+        <span class="inline-flex items-center gap-2">
+          <span class="text-sm font-semibold text-positive">+{{ formattedGoSalary() }}</span>
+          <svg
+            class="h-5 w-5 text-text-muted"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+          </svg>
+        </span>
       </button>
 
       <button
@@ -145,16 +148,19 @@
           </span>
           Impuesto renta
         </span>
-        <svg
-          class="h-5 w-5 text-text-muted"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
-        </svg>
+        <span class="inline-flex items-center gap-2">
+          <span class="text-sm font-semibold text-negative">-{{ formattedIncomeTax() }}</span>
+          <svg
+            class="h-5 w-5 text-text-muted"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+          </svg>
+        </span>
       </button>
 
       <button
@@ -181,17 +187,61 @@
           </span>
           Impuesto lujo
         </span>
-        <svg
-          class="h-5 w-5 text-text-muted"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
-        </svg>
+        <span class="inline-flex items-center gap-2">
+          <span class="text-sm font-semibold text-negative">-{{ formattedLuxuryTax() }}</span>
+          <svg
+            class="h-5 w-5 text-text-muted"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+          </svg>
+        </span>
       </button>
+
+      @if (edition().jailFine > 0) {
+        <button
+          type="button"
+          class="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-surface-elevated/50 focus:outline-none"
+          (click)="jailFineAction.emit()"
+        >
+          <span class="inline-flex items-center gap-3 text-text">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-elevated">
+              <svg
+                class="h-4 w-4 text-text-secondary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  [attr.d]="icons['lock']"
+                />
+              </svg>
+            </span>
+            Pagar cárcel
+          </span>
+          <span class="inline-flex items-center gap-2">
+            <span class="text-sm font-semibold text-negative">-{{ formattedJailFine() }}</span>
+            <svg
+              class="h-5 w-5 text-text-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+            </svg>
+          </span>
+        </button>
+      }
 
       @if (me().properties.length > 0) {
         <button

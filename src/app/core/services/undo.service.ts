@@ -11,6 +11,7 @@ export interface BuildKindMetadata {
 
 export type UndoableType =
   | 'transfer'
+  | 'bank-fee'
   | 'buy-property'
   | 'mortgage'
   | 'unmortgage'
@@ -20,6 +21,7 @@ export type UndoableType =
 
 const UNDOABLE_TYPES = new Set<UndoableType>([
   'transfer',
+  'bank-fee',
   'buy-property',
   'mortgage',
   'unmortgage',
@@ -83,6 +85,7 @@ export class UndoService {
         return entry.fromPlayerId === 'bank'
           ? entry.toPlayerId === userId
           : entry.fromPlayerId === userId;
+      case 'bank-fee':
       case 'buy-property':
       case 'unmortgage':
         return entry.fromPlayerId === userId;
@@ -144,6 +147,8 @@ export class UndoService {
         if (entry.metadata?.['transferGroupId']) {
           return this.applyTransferGroupInverse(room, entry, userId);
         }
+        return this.applyTransferInverse(room, entry, userId);
+      case 'bank-fee':
         return this.applyTransferInverse(room, entry, userId);
       case 'buy-property':
         return this.applyBuyInverse(room, entry, userId);

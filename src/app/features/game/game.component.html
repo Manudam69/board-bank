@@ -162,6 +162,7 @@
               (salaryAction)="onBankSalary()"
               (taxAction)="onBankTax($event)"
               (liquidateAction)="promptLiquidate()"
+              (jailFineAction)="promptJailFine()"
               (bankruptcyAction)="promptBankruptcy()"
               (propertyClick)="openPropertyDetail($event)"
             />
@@ -425,7 +426,7 @@
   (confirmed)="onFinishConfirmed($event)"
 />
 
-<app-confirm-dialog
+  <app-confirm-dialog
   [open]="confirmCancelTradeOpen()"
   title="¿Cancelar intercambio?"
   message="Esta oferta será cancelada y el jugador ya no podrá aceptarla. No se transferirá dinero ni propiedades."
@@ -434,6 +435,69 @@
   confirmVariant="danger"
   (confirmed)="onCancelTradeConfirmed($event)"
 />
+
+<app-modal
+  [open]="confirmJailFineOpen()"
+  title="Pagar cárcel"
+  size="sm"
+  [closeable]="!busy()"
+  (closeAction)="confirmJailFineOpen.set(false)"
+>
+  @if (currentPlayer(); as me) {
+    @if (edition(); as edition) {
+      <div class="space-y-5 p-6">
+        @if (canPayJailFine()) {
+          <p class="text-sm text-text-secondary">
+            La fianza establecida para esta partida es:
+          </p>
+
+          <div class="rounded-xl bg-negative-muted p-4 text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-negative">Fianza</p>
+            <p class="mt-1 text-2xl font-bold text-negative">{{ formatScaled(jailFineAmount()) }}</p>
+          </div>
+
+          <p class="text-sm text-text-secondary">¿Quieres pagar la fianza?</p>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <app-button variant="ghost" [disabled]="busy()" (clickAction)="confirmJailFineOpen.set(false)">Cancelar</app-button>
+            <app-button
+              variant="primary"
+              [disabled]="busy()"
+              (clickAction)="onJailFineConfirmed(true)"
+            >
+              Pagar {{ formatScaled(jailFineAmount()) }}
+            </app-button>
+          </div>
+        } @else {
+          <div class="flex items-center gap-3 text-negative">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['alert-triangle']" />
+            </svg>
+            <span class="font-semibold">Dinero insuficiente</span>
+          </div>
+
+          <p class="text-sm text-text-secondary">
+            Necesitas {{ formatScaled(jailFineAmount()) }} para pagar la cárcel.
+          </p>
+
+          <p class="text-sm text-text-secondary">
+            Disponible: <span class="font-medium text-text">{{ formatScaled(me.cash) }}</span>
+          </p>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <app-button variant="ghost" [disabled]="busy()" (clickAction)="confirmJailFineOpen.set(false)">Volver</app-button>
+            <app-button
+              variant="primary"
+              [disabled]="true"
+            >
+              Pagar {{ formatScaled(jailFineAmount()) }}
+            </app-button>
+          </div>
+        }
+      </div>
+    }
+  }
+</app-modal>
 
   @if (liquidatePlan(); as plan) {
   <app-modal

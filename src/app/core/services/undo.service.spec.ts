@@ -225,6 +225,28 @@ describe('UndoService', () => {
     expect(lastRoom!.players[0].cash).toBe(1500);
   });
 
+  it('reverses a jail fine from player to bank', async () => {
+    lastRoom = makeRoom();
+    lastRoom.log.push(
+      makeEntry({
+        type: 'bank-fee',
+        fromPlayerId: 'u1',
+        toPlayerId: 'bank',
+        amount: 50,
+        description: 'Fianza de cárcel',
+        metadata: { bankAction: 'jail-fine' },
+      }),
+    );
+    lastRoom.players[0].cash = 1450;
+
+    await service.undoLast('ROOM');
+
+    expect(lastRoom!.players[0].cash).toBe(1500);
+    expect(lastRoom!.log[0].metadata?.['undone']).toBe(true);
+    expect(lastRoom!.log[1].type).toBe('undo');
+    expect(lastRoom!.log[1].description).toBe('Deshecho: Fianza de cárcel');
+  });
+
   it('reverses a property purchase', async () => {
     lastRoom = makeRoom();
     addProperty(lastRoom, 'u1', 'p1');

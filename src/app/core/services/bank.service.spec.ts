@@ -99,6 +99,64 @@ describe('BankService guards', () => {
     expect(savedLog).toMatchObject({ metadata: { bankAction: 'income-tax' }, type: 'transfer' });
   });
 
+  describe('payJailFine', () => {
+    it('allows paying own jail fine and logs it as bank-fee', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+        savedRoom = room;
+      });
+      await service.payJailFine('ROOM', 'u1', 50);
+      const ana = savedRoom?.players.find((p) => p.id === 'u1');
+      const log = savedRoom?.log.at(-1);
+      expect(ana?.cash).toBe(1450);
+      expect(log).toMatchObject({
+        type: 'bank-fee',
+        amount: 50,
+        description: 'Fianza de cárcel',
+        fromPlayerId: 'u1',
+        toPlayerId: 'bank',
+        metadata: { bankAction: 'jail-fine' },
+      });
+    });
+
+    it('rejects paying jail fine for another player', () => {
+      expect(() => service.payJailFine('ROOM', 'u2', 50)).toThrow(
+        'No puedes realizar operaciones sobre la cartera de otro jugador',
+      );
+    });
+
+    it('rejects when player has insufficient funds', async () => {
+      let savedRoom: Room | undefined;
+      runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {
+        const room = makeRoom();
+        room.players[0].cash = 30;
+        savedRoom = room;
+        const next = mutator(room);
+        if (next) Object.assign(room, next);
+      });
+      await expect(service.payJailFine('ROOM', 'u1', 50)).rejects.toThrow(
+        'Ana no tiene suficiente dinero',
+      );
+      expect(savedRoom?.players[0].cash).toBe(30);
+      expect(savedRoom?.log.length).toBe(0);
+    });
+
+    it('rejects non-positive or non-integer amounts', () => {
+      expect(() => service.payJailFine('ROOM', 'u1', 0)).toThrow(
+        'La fianza debe ser un número entero mayor que cero',
+      );
+      expect(() => service.payJailFine('ROOM', 'u1', -10)).toThrow(
+        'La fianza debe ser un número entero mayor que cero',
+      );
+      expect(() => service.payJailFine('ROOM', 'u1', 50.5)).toThrow(
+        'La fianza debe ser un número entero mayor que cero',
+      );
+    });
+  });
+
   it('includes metadata in bankruptcy log entry', async () => {
     let savedRoom: Room | undefined;
     runInTransactionMock.mockImplementationOnce(async (_roomId: string, mutator: (room: Room) => Room | null) => {

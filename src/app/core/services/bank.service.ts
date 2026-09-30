@@ -169,6 +169,37 @@ export class BankService {
     return this.transfer(roomId, 'bank', playerId, amount, description, metadata);
   }
 
+  payJailFine(roomId: string, playerId: string, amount: number): Promise<void> {
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      throw new Error('La fianza debe ser un número entero mayor que cero');
+    }
+    this.ensureActor(playerId);
+
+    return this.gameState.runInTransaction(roomId, (room) => {
+      const player = this.requirePlayer(room, playerId);
+
+      if (player.cash < amount) {
+        throw new Error(`${player.name} no tiene suficiente dinero`);
+      }
+
+      const players = room.players.map((p) =>
+        p.id === player.id ? { ...p, cash: p.cash - amount } : p,
+      );
+
+      const log = this.buildLog(
+        'bank-fee',
+        amount,
+        'Fianza de cárcel',
+        playerId,
+        'bank',
+        undefined,
+        { bankAction: 'jail-fine' },
+      );
+
+      return { ...room, players, log: [...room.log, log] };
+    });
+  }
+
   bankPayTo(
     roomId: string,
     toPlayerId: string,

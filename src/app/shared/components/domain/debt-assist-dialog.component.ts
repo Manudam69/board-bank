@@ -15,6 +15,30 @@ import type { CurrencyConfig, Edition, Player } from '../../../core/models';
 import { DebtAssistanceService, type DebtPayment } from '../../../core/services/debt-assistance.service';
 import type { EvaluatedDebtAction } from '../../../core/services/liquidation.service';
 
+interface SellPropertyPlan {
+  propertyId: string;
+  propertyName: string;
+  group: string;
+  groupColor: string;
+  currentLevel: number;
+  proposedLevel: number;
+  actions: EvaluatedDebtAction[];
+  selectedCount: number;
+  selectedRecovery: number;
+  nextAction?: EvaluatedDebtAction;
+  restriction?: string;
+}
+
+interface SellGroupPlan {
+  group: string;
+  label: string;
+  color: string;
+  properties: SellPropertyPlan[];
+  selectedRecovery: number;
+  maxRecovery: number;
+  totalBuildings: number;
+}
+
 @Component({
   selector: 'app-debt-assist-dialog',
   imports: [ButtonComponent, MoneyPipe],
@@ -37,6 +61,7 @@ export class DebtAssistDialogComponent {
 
   protected readonly icons = ICONS as Record<string, string>;
   protected readonly selectedIds = model<Set<string>>(new Set());
+  protected readonly expandedGroups = signal<Set<string>>(new Set());
   private initialized = false;
 
   readonly paymentAmount = computed(() => this.payment()?.amount ?? 0);
@@ -65,6 +90,61 @@ export class DebtAssistDialogComponent {
   readonly mortgageRecovery = computed(() =>
     this.mortgageActions().reduce((sum, a) => sum + (a.selected ? a.amount : 0), 0),
   );
+
+  readonly maxSellRecovery = computed(() => this.sellActions().reduce((sum, action) => sum + action.amount, 0));
+  readonly maxMortgageRecovery = computed(() => Math.max(0, this.maxRecovery() - this.maxSellRecovery()));
+
+  readonly sellGroups = computed<SellGroupPlan[]>(() => {
+    const actionsByProperty = new Map<string, EvaluatedDebtAction[]>();
+    for (const action of this.sellActions()) {
+      const actions = actionsByProperty.get(action.propertyId) ?? [];
+      actions.push(action);
+      actionsByProperty.set(action.propertyId, actions);
+    }
+
+    const groups = new Map<string, SellPropertyPlan[]>();
+    for (const [propertyId, actions] of actionsByProperty) {
+      const meta = this.edition().properties.find((property) => property.id === propertyId);
+      if (!meta) continue;
+
+      const current = this.me().properties.find((property) => property.propertyId === propertyId);
+      const selected = actions.filter((action) => action.selected);
+      const selectedCount = selected.length;
+      const currentLevel = current?.hasHotel ? 5 : (current?.houses ?? 0);
+      const proposedLevel = Math.max(0, currentLevel - selectedCount);
+      const nextAction = actions.find((action) => !action.selected && action.available);
+      const firstBlocked = actions.find((action) => !action.selected && !action.available);
+      const propertyPlan: SellPropertyPlan = {
+        propertyId,
+        propertyName: meta.name,
+        group: meta.group,
+        groupColor: meta.groupColor,
+        currentLevel,
+        proposedLevel,
+        actions,
+        selectedCount,
+        selectedRecovery: selected.reduce((sum, action) => sum + action.amount, 0),
+        nextAction,
+        restriction: firstBlocked?.reason,
+      };
+      const properties = groups.get(meta.group) ?? [];
+      properties.push(propertyPlan);
+      groups.set(meta.group, properties);
+    }
+
+    return [...groups.entries()].map(([group, properties]) => ({
+      group,
+      label: this.groupLabel(group),
+      color: properties[0]?.groupColor ?? '#000000',
+      properties,
+      selectedRecovery: properties.reduce((sum, property) => sum + property.selectedRecovery, 0),
+      maxRecovery: properties.reduce(
+        (sum, property) => sum + property.actions.reduce((propertySum, action) => propertySum + action.amount, 0),
+        0,
+      ),
+      totalBuildings: properties.reduce((sum, property) => sum + property.currentLevel, 0),
+    }));
+  });
 
   readonly totalAvailable = computed(() => this.me().cash + this.selectedRecovery());
   readonly remainingCash = computed(() => this.totalAvailable() - this.paymentAmount());
@@ -128,6 +208,39 @@ export class DebtAssistDialogComponent {
       default:
         return '';
     }
+  }
+
+  protected levelLabel(level: number): string {
+    if (level === 5) return 'Hotel';
+    if (level === 0) return 'Sin edificios';
+    return `${level} ${level === 1 ? 'casa' : 'casas'}`;
+  }
+
+  protected groupLabel(group: string): string {
+    return group.charAt(0).toUpperCase() + group.slice(1);
+  }
+
+  protected adjustSell(property: SellPropertyPlan, increase: boolean): void {
+    if (increase) {
+      if (property.nextAction) this.toggleSell(property.nextAction);
+      return;
+    }
+
+    const selected = [...property.actions].reverse().find((action) => action.selected);
+    if (selected) this.toggleSell(selected);
+  }
+
+  protected isGroupExpanded(group: string): boolean {
+    return this.expandedGroups().has(group);
+  }
+
+  protected toggleGroup(group: string): void {
+    this.expandedGroups.update((groups) => {
+      const next = new Set(groups);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
   }
 
   protected toggleSell(action: EvaluatedDebtAction): void {

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, linkedSignal, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +15,16 @@ import { TradeService } from '../../core/services/trade.service';
 import { RoomService } from '../../core/services/room.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SoundService } from '../../core/services/sound.service';
+import { HapticsService } from '../../core/services/haptics.service';
 import { UndoService } from '../../core/services/undo.service';
+import {
+  SuccessBurstComponent,
+  SuccessBurstService,
+} from '../../shared/components/ui/success-burst.component';
+import {
+  SwipeTabsDirective,
+  type TabSwipeDirection,
+} from '../../shared/components/ui/swipe-tabs.directive';
 import {
   BankActionsBarComponent,
   type BankAction,
@@ -87,6 +96,8 @@ type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'jail-fine' | 'ba
     LogFeedComponent,
     BankActionsBarComponent,
     DebtAssistFlowComponent,
+    SuccessBurstComponent,
+    SwipeTabsDirective,
   ],
   templateUrl: './game.component.html',
 })
@@ -104,6 +115,8 @@ export class GameComponent {
   private readonly toastService = inject(ToastService);
   protected readonly soundService = inject(SoundService);
   private readonly undoService = inject(UndoService);
+  private readonly haptics = inject(HapticsService);
+  private readonly successBurst = inject(SuccessBurstService);
     private readonly moneyFormatter = inject(MoneyFormatService);
     private readonly liquidation = inject(LiquidationService);
 
@@ -148,6 +161,7 @@ export class GameComponent {
   readonly joinName = signal('');
   readonly joining = signal(false);
   readonly activeTab = signal('me');
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   readonly activeAction = signal<BankAction | null>(null);
   readonly rentContextPlayerId = signal<string | undefined>(undefined);
   readonly busy = signal(false);
@@ -215,10 +229,37 @@ export class GameComponent {
     { id: 'log', label: 'Historial', icon: ICONS['history'] },
   ]);
 
+  readonly tabIds = computed(() => this.tabs().map((tab) => tab.id));
+
+  /** Slide direction for the incoming tab, derived from the order of the tabs. */
+  readonly tabMotion = linkedSignal<string, string>({
+    source: this.activeTab,
+    computation: (tab, previous) => {
+      if (!previous) return '';
+      const ids = this.tabIds();
+      return ids.indexOf(tab) >= ids.indexOf(previous.source)
+        ? 'animate-tab-in-next'
+        : 'animate-tab-in-prev';
+    },
+  });
+
+  protected onTabSwipe(direction: TabSwipeDirection): void {
+    const ids = this.tabIds();
+    const target = ids[ids.indexOf(this.activeTab()) + (direction === 'next' ? 1 : -1)];
+    if (!target) return;
+    this.haptics.play('selection');
+    this.activeTab.set(target);
+  }
+
   private lastSeenLogId: string | null = null;
   private readonly knownTrades = new Map<string, TradeStatus>();
 
   constructor() {
+    effect(() => {
+      this.activeTab();
+      untracked(() => this.scroller()?.nativeElement.scrollTo({ top: 0 }));
+    });
+
     effect(() => {
       const id = this.roomId();
       if (id) this.gameState.subscribe(id);
@@ -327,11 +368,14 @@ export class GameComponent {
           : undefined;
         this.toastService.success(success.message, success.detail, action);
         this.soundService.play(success.sound);
+        this.successBurst.show();
+        this.haptics.play('success');
       }
     } catch (e) {
       const message = mapFirebaseError(e);
       this.toastService.error(message);
       this.soundService.play('error');
+      this.haptics.play('error');
     } finally {
       this.busy.set(false);
     }

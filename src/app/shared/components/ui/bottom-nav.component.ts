@@ -1,4 +1,4 @@
-import { Component, input, model } from '@angular/core';
+import { Component, computed, input, model } from '@angular/core';
 import { ICONS } from '../../icons';
 
 export interface BottomNavItem {
@@ -17,4 +17,7 @@ export class BottomNavComponent {
   readonly items = input.required<BottomNavItem[]>();
   readonly activeItem = model.required<string>();
   protected readonly icons = ICONS;
+  protected readonly activeIndex = computed(() =>
+    Math.max(0, this.items().findIndex((item) => item.id === this.activeItem())),
+  );
 }

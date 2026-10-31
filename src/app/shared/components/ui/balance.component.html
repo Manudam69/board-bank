@@ -1,10 +1,12 @@
 <div class="relative inline-flex flex-col items-start">
   <app-money-display
-    [amount]="amount()"
+    [amount]="displayAmount()"
     [currency]="currency()"
     [size]="size()"
     [class.animate-pulse-balance]="pulseEven()"
     [class.animate-pulse-balance-alt]="!pulseEven() && hasDelta()"
+    [class.tint-up]="tint() === 'up'"
+    [class.tint-down]="tint() === 'down'"
   />
 
   @for (d of deltas(); track d.id) {

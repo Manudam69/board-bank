@@ -1,7 +1,10 @@
 <div class="space-y-5">
   <div class="space-y-3">
-    @for (offer of pendingTrades(); track offer.id) {
-      <div class="rounded-xl border border-border bg-surface p-4">
+    @for (offer of pendingTrades(); track offer.id; let i = $index) {
+      <div
+        class="stagger-in rounded-xl border border-border bg-surface p-4"
+        [style.--i]="i < 8 ? i : 8"
+      >
         <div class="flex items-center justify-between">
           <span
             class="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"

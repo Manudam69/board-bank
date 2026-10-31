@@ -1,15 +1,31 @@
-@if (open()) {
+@if (rendered()) {
   <div
     [class]="backdropClasses()"
+    [style.background-color]="backdropColor()"
+    [style.transition]="backdropTransition()"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="title()"
+    [attr.data-closing]="closing() ? '' : null"
     (click)="close()"
     (keydown.escape)="onKeydown($event)"
     tabindex="-1"
   >
-    <div [class]="dialogClasses()" (click)="$event.stopPropagation()">
-      <div class="shrink-0 px-4 pt-3 pb-2 sm:px-6 sm:pt-6 sm:pb-4">
+    <div
+      #panel
+      [class]="dialogClasses()"
+      [style.translate]="panelTranslate()"
+      [style.transition]="panelTransition()"
+      [style.height.px]="frozenHeight()"
+      (click)="$event.stopPropagation()"
+    >
+      <div
+        class="shrink-0 touch-none px-4 pt-3 pb-2 sm:touch-auto sm:px-6 sm:pt-6 sm:pb-4"
+        (pointerdown)="onDragStart($event)"
+        (pointermove)="onDragMove($event)"
+        (pointerup)="onDragEnd($event)"
+        (pointercancel)="onDragEnd($event, true)"
+      >
         <div class="mx-auto mb-2 h-1 w-12 rounded-full bg-border sm:mb-4 sm:hidden" aria-hidden="true"></div>
         <div class="flex items-center justify-between gap-4">
           @if (title()) {

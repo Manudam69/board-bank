@@ -1,7 +1,8 @@
 <div class="space-y-1">
-  @for (entry of logs(); track entry.id) {
+  @for (entry of logs(); track entry.id; let i = $index) {
     <div
-      class="group flex items-start gap-3 rounded-xl border border-border p-3 transition hover:border-surface-hover"
+      class="stagger-in group flex items-start gap-3 rounded-xl border border-border p-3 transition hover:border-surface-hover"
+      [style.--i]="i < 8 ? i : 8"
       [class.bg-surface]="!entry.isUndone"
       [class.bg-surface-elevated/30]="entry.isUndone"
       [class.opacity-60]="entry.isUndone"

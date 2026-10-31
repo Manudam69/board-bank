@@ -10,6 +10,7 @@ import { RoomService } from '../../core/services/room.service';
 import { EditionService } from '../../core/services/edition.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SoundService } from '../../core/services/sound.service';
+import { HapticsService } from '../../core/services/haptics.service';
 import { CLASSIC_SPAIN } from '../../core/constants/editions';
 import type { Room } from '../../core/models';
 
@@ -104,6 +105,7 @@ describe('LobbyComponent', () => {
         { provide: EditionService, useValue: { editions: signal([CLASSIC_SPAIN]) } },
         { provide: AuthService, useValue: auth },
         { provide: SoundService, useValue: { play: vi.fn() } },
+        { provide: HapticsService, useValue: { play: vi.fn() } },
       ],
     });
   });

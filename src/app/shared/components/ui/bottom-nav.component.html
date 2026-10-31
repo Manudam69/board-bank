@@ -2,7 +2,15 @@
   class="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] hide-desktop"
   aria-label="Navegación principal"
 >
-  <div class="grid h-16 auto-cols-fr grid-flow-col items-center">
+  <div class="relative grid h-16 auto-cols-fr grid-flow-col items-center">
+    <span
+      class="pointer-events-none absolute left-0 top-0 flex justify-center transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      [style.width.%]="100 / items().length"
+      [style.transform]="'translateX(' + activeIndex() * 100 + '%)'"
+      aria-hidden="true"
+    >
+      <span class="h-0.5 w-10 rounded-full bg-accent-focus"></span>
+    </span>
     @for (item of items(); track item.id) {
       <button
         type="button"
@@ -20,6 +28,7 @@
       >
         <svg
           class="h-6 w-6 transition-transform group-active:scale-90"
+          [class.animate-nav-pop]="activeItem() === item.id"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

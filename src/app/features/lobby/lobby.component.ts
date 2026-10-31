@@ -16,6 +16,7 @@ import { EditionService } from '../../core/services/edition.service';
 import { GameStateService } from '../../core/services/game-state.service';
 import { RoomService } from '../../core/services/room.service';
 import { SoundService } from '../../core/services/sound.service';
+import { HapticsService } from '../../core/services/haptics.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { ConfirmDialogComponent } from '../../shared/components/ui/confirm-dialog.component';
 import { QrCodeComponent } from '../../shared/components/ui/qr-code.component';
@@ -39,6 +40,7 @@ export class LobbyComponent {
   private readonly editions = inject(EditionService);
   private readonly auth = inject(AuthService);
   private readonly soundService = inject(SoundService);
+  private readonly haptics = inject(HapticsService);
 
   readonly roomId = toSignal(this.route.paramMap.pipe(map((p) => p.get('roomId') ?? '')));
   readonly room = this.gameState.room;
@@ -108,6 +110,7 @@ export class LobbyComponent {
       const room = this.room();
       if (room?.status === 'playing' && !this.showStartOverlay()) {
         this.soundService.play('start');
+        this.haptics.play('success');
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         this.showStartOverlay.set(true);
         const delay = prefersReducedMotion ? 0 : 700;

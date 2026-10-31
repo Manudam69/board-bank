@@ -64,7 +64,7 @@ export class ModalComponent {
       lg: 'sm:max-w-2xl',
       xl: 'sm:max-w-4xl',
     };
-    return `relative flex w-full flex-col overflow-hidden rounded-t-3xl sm:rounded-modal bg-surface sm:border border-border shadow-2xl shadow-black/40 max-h-[85svh] ${map[this.size()]} animate-sheet-in sm:animate-scale-in`;
+    return `relative flex w-full flex-col overflow-hidden rounded-t-3xl sm:rounded-modal bg-surface sm:border border-border shadow-2xl shadow-black/40 max-h-[92dvh] sm:max-h-[85dvh] ${map[this.size()]} animate-sheet-in sm:animate-scale-in`;
   }
 
   protected backdropClasses(): string {

@@ -48,20 +48,21 @@
         </div>
 
         @if (canAccept(offer) || canCancel(offer)) {
-          <div class="mt-4 flex gap-2">
+          <div class="mt-4 grid grid-cols-2 gap-2 sm:flex">
             @if (canCancel(offer)) {
               <app-button
-                class="ml-auto"
+                class="col-span-2 sm:ml-auto"
                 variant="secondary"
+                [fullWidth]="true"
                 (clickAction)="cancelAction.emit(offer.id)"
               >
                 Cancelar
               </app-button>
             } @else {
-              <app-button variant="secondary" (clickAction)="rejectAction.emit(offer.id)">
+              <app-button variant="secondary" [fullWidth]="true" (clickAction)="rejectAction.emit(offer.id)">
                 Rechazar
               </app-button>
-              <app-button (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
+              <app-button [fullWidth]="true" (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
             }
           </div>
         }

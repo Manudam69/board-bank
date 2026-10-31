@@ -1,4 +1,62 @@
-<div class="flex items-center gap-2" (mouseleave)="showMore.set(false)">
+<!-- Phones: fixed dock, one tap away from any tab -->
+<div class="grid grid-cols-5 gap-1 sm:hidden" role="group" aria-label="Acciones del banco">
+  @for (action of mobileActions; track action.id) {
+    <button
+      type="button"
+      class="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-medium leading-tight transition focus:outline-none active:scale-[0.97]"
+      [class.bg-accent]="action.id === 'rent'"
+      [class.text-white]="action.id === 'rent'"
+      [class.text-text-secondary]="action.id !== 'rent'"
+      [class.active:bg-surface-elevated]="action.id !== 'rent'"
+      [attr.aria-label]="action.label"
+      (click)="emit(action.id)"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="action.icon" />
+      </svg>
+      <span class="max-w-full truncate">{{ action.short }}</span>
+    </button>
+  }
+
+  <div class="relative">
+    <button
+      type="button"
+      class="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-medium leading-tight text-text-secondary transition focus:outline-none active:scale-[0.97] active:bg-surface-elevated"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="showMore()"
+      (click)="showMore.set(!showMore())"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['more-horizontal']" />
+      </svg>
+      <span>Más</span>
+    </button>
+
+    @if (showMore()) {
+      <div
+        class="absolute right-0 top-full z-20 mt-2 w-52 overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
+        role="menu"
+      >
+        @for (action of mobileMoreActions; track action.id) {
+          <button
+            type="button"
+            class="flex min-h-12 w-full items-center gap-3 px-4 text-sm text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none active:bg-surface-elevated"
+            role="menuitem"
+            (click)="emit(action.id)"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="action.icon" />
+            </svg>
+            {{ action.label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Tablet and desktop -->
+<div class="hidden items-center gap-2 sm:flex">
   <button
     type="button"
     class="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-hover focus:outline-none active:scale-[0.98]"
@@ -13,26 +71,28 @@
   @for (action of quickActions; track action.id) {
     <button
       type="button"
-      class="inline-flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none active:scale-[0.98] sm:flex-row sm:gap-1.5 sm:px-3"
+      class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none active:scale-[0.98]"
       (click)="emit(action.id)"
     >
-      <svg class="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="action.icon" />
       </svg>
-      <span class="hidden sm:inline">{{ action.label }}</span>
+      {{ action.label }}
     </button>
   }
 
   <div class="relative">
     <button
       type="button"
-      class="inline-flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none active:scale-[0.98] sm:flex-row sm:gap-1.5 sm:px-3"
+      class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-text-secondary transition hover:bg-surface-elevated hover:text-text focus:outline-none active:scale-[0.98]"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="showMore()"
       (click)="showMore.set(!showMore())"
     >
-      <svg class="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['more-horizontal']" />
       </svg>
-      <span class="hidden sm:inline">Más</span>
+      Más
     </button>
 
     @if (showMore()) {

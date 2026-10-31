@@ -177,15 +177,17 @@ import { MoneyPipe } from '../../../shared/pipes/money.pipe';
         </p>
       }
 
-      <app-button
-        [fullWidth]="true"
-        size="lg"
-        [loading]="processing()"
-        [disabled]="!canCreate()"
-        (clickAction)="create()"
-      >
-        Crear partida
-      </app-button>
+      <footer class="sheet-footer mt-1">
+        <app-button
+          [fullWidth]="true"
+          size="lg"
+          [loading]="processing()"
+          [disabled]="!canCreate()"
+          (clickAction)="create()"
+        >
+          Crear partida
+        </app-button>
+      </footer>
     </div>
   `,
 })

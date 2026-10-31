@@ -72,18 +72,6 @@
           {{ bankOption().name.charAt(0).toUpperCase() }}
         </span>
         <span class="truncate max-w-[8rem]">{{ bankOption().name }}</span>
-        @if (selectedIds().has('bank')) {
-          <svg
-            class="ml-1 h-4 w-4 text-accent"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="3"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['check']" />
-          </svg>
-        }
       </button>
 
       @for (target of eligiblePlayers(); track target.id) {
@@ -107,29 +95,17 @@
             {{ target.name.charAt(0).toUpperCase() }}
           </span>
           <span class="truncate max-w-[8rem]">{{ target.name }}</span>
-          @if (selectedIds().has(target.id)) {
-            <svg
-              class="ml-1 h-4 w-4 text-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="3"
-              aria-hidden="true"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['check']" />
-            </svg>
-          }
         </button>
       }
     </div>
 
-    @if (selectedCount() > 0) {
-      <p class="text-xs text-text-secondary" aria-live="polite">
+    <p class="min-h-4 text-xs text-text-secondary" aria-live="polite">
+      @if (selectedCount() > 0) {
         {{ selectedPlayerCount() }}
         {{ selectedPlayerCount() === 1 ? 'jugador' : 'jugadores' }} seleccionados
         @if (selectedIds().has('bank')) { · Banco incluido }
-      </p>
-    }
+      }
+    </p>
   </div>
 
   <app-amount-input
@@ -195,15 +171,17 @@
     />
   </div>
 
-  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    @if (total() > 0) {
-      @if (insufficient()) {
-        Conseguir efectivo y transferir {{ formatter.format(total(), currency()) }}
+  <footer class="sheet-footer">
+    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
+      @if (total() > 0) {
+        @if (insufficient()) {
+          Conseguir efectivo y transferir {{ formatter.format(total(), currency()) }}
+        } @else {
+          Transferir {{ formatter.format(total(), currency()) }}
+        }
       } @else {
-        Transferir {{ formatter.format(total(), currency()) }}
+        Transferir
       }
-    } @else {
-      Transferir
-    }
-  </app-button>
+    </app-button>
+  </footer>
 </div>

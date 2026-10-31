@@ -1,6 +1,6 @@
 <app-home-background />
 
-<header class="absolute left-0 right-0 top-0 z-50 bg-bg/95">
+<header class="absolute left-0 right-0 top-0 z-50 bg-bg/95 pt-[var(--safe-top)]">
   <nav
     class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4"
     aria-label="Navegación principal"
@@ -20,7 +20,7 @@
 
       <button
         type="button"
-        class="focus-ring-inset rounded-full p-2 text-text-secondary transition hover:bg-surface-elevated hover:text-text"
+        class="focus-ring-inset flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition hover:bg-surface-elevated hover:text-text"
         [attr.aria-label]="soundEnabled() ? 'Desactivar sonidos' : 'Activar sonidos'"
         [attr.aria-pressed]="soundEnabled()"
         (click)="toggleSound()"
@@ -77,6 +77,7 @@
 <app-modal
   [open]="showCreateModal()"
   title="Crear partida"
+  [flushBottom]="true"
   (closeAction)="showCreateModal.set(false)"
 >
   @if (showCreateModal()) {

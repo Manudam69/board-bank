@@ -1,5 +1,5 @@
-<div class="mx-auto max-w-5xl px-4 py-8">
-  <div class="mb-6 flex items-center justify-between">
+<div class="mx-auto max-w-5xl px-4 pb-8 pt-[calc(2rem+var(--safe-top))]">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-2xl font-bold text-text">Ediciones</h1>
     <div class="flex gap-2">
       <app-button variant="secondary" size="sm" (clickAction)="router.navigate(['/'])">Volver</app-button>
@@ -9,7 +9,7 @@
 
   <div class="space-y-3">
     @for (edition of editions(); track edition.id) {
-      <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+      <div class="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div class="min-w-0">
           <h2 class="text-base font-semibold text-text">{{ edition.name }}</h2>
           <p class="text-sm text-text-secondary">
@@ -31,7 +31,7 @@
   </div>
 </div>
 
-<app-modal [open]="showEditor()" title="Editor de edición" size="xl" (closeAction)="showEditor.set(false)">
+<app-modal [open]="showEditor()" title="Editor de edición" size="xl" [flushBottom]="true" (closeAction)="showEditor.set(false)">
   <div class="space-y-5">
     @if (error()) {
       <div class="rounded-lg border border-negative/30 bg-danger-muted p-3 text-sm text-negative" role="alert">{{ error() }}</div>
@@ -123,7 +123,7 @@
     </div>
 
     <h3 class="text-base font-semibold text-text">Propiedades</h3>
-    <div class="max-h-96 space-y-2 overflow-y-auto pr-1">
+    <div class="space-y-2 sm:max-h-96 sm:overflow-y-auto sm:pr-1">
       @for (property of properties(); track property.id; let i = $index) {
         <div class="overflow-hidden rounded-xl border border-border">
           <button
@@ -239,7 +239,9 @@
 
     <app-button variant="secondary" (clickAction)="addProperty()">Añadir propiedad</app-button>
 
-    <app-button [fullWidth]="true" [loading]="saving()" (clickAction)="save()">Guardar edición</app-button>
+    <footer class="sheet-footer">
+      <app-button [fullWidth]="true" size="lg" [loading]="saving()" (clickAction)="save()">Guardar edición</app-button>
+    </footer>
   </div>
 </app-modal>
 

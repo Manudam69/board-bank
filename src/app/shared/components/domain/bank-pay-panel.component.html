@@ -153,11 +153,13 @@
     />
   </div>
 
-  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    @if (isHost()) {
-      Enviar dinero
-    } @else {
-      Recibir dinero
-    }
-  </app-button>
+  <footer class="sheet-footer">
+    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
+      @if (isHost()) {
+        Enviar dinero
+      } @else {
+        Recibir dinero
+      }
+    </app-button>
+  </footer>
 </div>

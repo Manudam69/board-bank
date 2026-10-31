@@ -27,9 +27,7 @@ describe('BankActionsBarComponent', () => {
   });
 
   it('emits quick actions', () => {
-    const quickButtons = fixture.nativeElement.querySelectorAll(
-      '.inline-flex.flex-col.items-center, .inline-flex.sm\\:flex-row.items-center',
-    );
+    const quickButtons = fixture.nativeElement.querySelectorAll('button');
     expect(quickButtons.length).toBeGreaterThan(0);
     const transferButton = Array.from(quickButtons).find((b) =>
       (b as HTMLElement).textContent?.includes('Transferir'),
@@ -44,6 +42,14 @@ describe('BankActionsBarComponent', () => {
     expect(bankPaymentButton).toBeTruthy();
     bankPaymentButton!.click();
     expect(emittedActions).toContain('bank-payment');
+  });
+
+  it('exposes the four primary actions as labelled buttons for phones', () => {
+    const mobileGroup = fixture.nativeElement.querySelector('[role="group"]') as HTMLElement;
+    const labels = Array.from(mobileGroup.querySelectorAll('button[aria-label]')).map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    expect(labels).toEqual(['Pagar renta', 'Transferir', 'Pagar del Banco', 'Comprar']);
   });
 
   it('opens the more menu and emits extra actions', () => {

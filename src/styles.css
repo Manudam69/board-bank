@@ -394,6 +394,45 @@ a,
 [role='button'],
 [role='menuitem'] {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 16px inputs stop iOS Safari from zooming the page on focus. */
+@media (max-width: 639px) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+body {
+  overflow-x: clip;
+}
+
+/* Action footer pinned to the bottom edge of a modal's scroll area, so the
+   primary button is reachable without scrolling. Pair with [flushBottom]="true". */
+.sheet-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-inline: -1rem;
+  padding: 0.75rem 1rem calc(0.75rem + var(--safe-bottom));
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -8px 16px -8px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 640px) {
+  .sheet-footer {
+    margin-inline: -1.5rem;
+    padding: 1rem 1.5rem calc(1rem + var(--safe-bottom));
+  }
 }
 
 /* Hide on mobile / desktop helpers */

@@ -12,7 +12,7 @@
     </div>
   }
 
-  <div class="max-h-96 space-y-5 overflow-y-auto pr-1">
+  <div class="space-y-5">
     @for (group of groupedProperties(); track group.group) {
       <div>
         <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{{ group.group }}</h4>
@@ -33,15 +33,17 @@
     }
   </div>
 
-  <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
-    @if (selectedProperty(); as p) {
-      @if (me().cash >= p.price) {
-        Comprar {{ p.price | money: currency() }}
+  <footer class="sheet-footer">
+    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
+      @if (selectedProperty(); as p) {
+        @if (me().cash >= p.price) {
+          Comprar {{ p.price | money: currency() }}
+        } @else {
+          Conseguir efectivo y comprar {{ p.price | money: currency() }}
+        }
       } @else {
-        Conseguir efectivo y comprar {{ p.price | money: currency() }}
+        Selecciona una propiedad
       }
-    } @else {
-      Selecciona una propiedad
-    }
-  </app-button>
+    </app-button>
+  </footer>
 </div>

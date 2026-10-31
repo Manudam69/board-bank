@@ -1,5 +1,6 @@
-import { Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import type { Edition, Player, PlayerProperty, PropertyMetadata } from '../models';
+import { MoneyFormatService } from './money-format.service';
 
 /** Nivel efectivo de construcción: 0..4 casas, 5 hotel. */
 export type BuildingLevel = 0 | 1 | 2 | 3 | 4 | 5;
@@ -44,6 +45,8 @@ export interface BuildingAction {
  */
 @Service()
 export class BuildingRulesService {
+  private readonly moneyFormatter = inject(MoneyFormatService);
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -181,7 +184,7 @@ export class BuildingRulesService {
     if (player.cash < meta.houseCost) {
       return {
         available: false,
-        reason: `Dinero insuficiente: necesitas ${this.formatAmount(meta.houseCost)}`,
+        reason: `Dinero insuficiente: necesitas ${this.formatAmount(meta.houseCost, edition)}`,
         shortReason: 'Dinero insuficiente',
         cost: meta.houseCost,
       };
@@ -230,7 +233,7 @@ export class BuildingRulesService {
     if (player.cash < meta.hotelCost) {
       return {
         available: false,
-        reason: `Dinero insuficiente: necesitas ${this.formatAmount(meta.hotelCost)}`,
+        reason: `Dinero insuficiente: necesitas ${this.formatAmount(meta.hotelCost, edition)}`,
         shortReason: 'Dinero insuficiente',
         cost: meta.hotelCost,
       };
@@ -466,8 +469,8 @@ export class BuildingRulesService {
   // Utilidades
   // ---------------------------------------------------------------------------
 
-  private formatAmount(amount: number): string {
-    return amount.toLocaleString('es-ES');
+  private formatAmount(amount: number, edition: Edition): string {
+    return this.moneyFormatter.format(amount, edition.currency);
   }
 
   private joinNames(names: string[]): string {

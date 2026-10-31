@@ -6,6 +6,7 @@ import {
   type BuildingActionId,
   type GroupBuildingState,
 } from '../../../core/services/building-rules.service';
+import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { BalanceComponent } from '../../components/ui/balance.component';
 import { ButtonComponent } from '../../components/ui/button.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
@@ -34,6 +35,7 @@ export interface PropertyCard {
 })
 export class BuildManagerComponent {
   private readonly rules = inject(BuildingRulesService);
+  private readonly moneyFormatter = inject(MoneyFormatService);
 
   readonly edition = input.required<Edition>();
   readonly me = input.required<Player>();
@@ -211,6 +213,6 @@ export class BuildManagerComponent {
   }
 
   private format(amount: number): string {
-    return amount.toLocaleString('es-ES');
+    return this.moneyFormatter.format(amount, this.currency());
   }
 }

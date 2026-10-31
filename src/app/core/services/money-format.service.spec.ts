@@ -44,10 +44,11 @@ describe('MoneyFormatService', () => {
     expect(service.parse(150, currency)).toBe(150_000_000);
   });
 
-  it('formats exact full value with thousands separators', () => {
+  it('keeps decimal million amounts abbreviated', () => {
     const currency: CurrencyConfig = { symbol: '$', code: 'USD', scale: 'millions' };
-    expect(service.formatExact(1_180_000, currency)).toBe('$1,180,000');
-    expect(service.formatExact(0, currency)).toBe('$0');
+    expect(service.format(1_180_000, currency)).toBe('$1.18M');
+    expect(service.format(15_500_000, currency)).toBe('$15.5M');
+    expect(service.format(0, currency)).toBe('$0');
   });
 
   it('selects scale step matching currency scale', () => {

@@ -54,7 +54,24 @@ describe('AmountInputComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.amount()).toBe(1_180_000);
-    expect(fixture.nativeElement.textContent).toContain('$1,180,000');
+    expect(fixture.nativeElement.textContent).toContain('$1.18M');
+  });
+
+  it('shows 15.5 million as $15.5M in the preview', async () => {
+    const fixture = TestBed.createComponent(AmountInputComponent);
+    fixture.componentRef.setInput('currency', currency);
+    fixture.componentRef.setInput('edition', edition());
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const input = fixture.nativeElement.querySelector('input');
+    input.value = '15.5';
+    input.dispatchEvent(new InputEvent('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.amount()).toBe(15_500_000);
+    expect(fixture.nativeElement.textContent).toContain('$15.5M');
   });
 
   it('switching scale keeps mantissa and recomputes value', async () => {

@@ -127,17 +127,17 @@
     <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm">
       <p class="text-text-secondary">
         {{ to.name }} recibe
-        <span class="font-semibold text-text">{{ formatter.formatExact(amount(), currency()) }}</span>
+        <span class="font-semibold text-text">{{ formatter.format(amount(), currency()) }}</span>
       </p>
       <p class="mt-1 text-text-secondary">
         Saldo final:
-        <span class="font-semibold text-text">{{ formatter.formatExact(finalBalance(), currency()) }}</span>
+        <span class="font-semibold text-text">{{ formatter.format(finalBalance(), currency()) }}</span>
       </p>
     </div>
   } @else if (amount() > 0) {
     <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm text-text-secondary">
       Total a pagar:
-      <span class="font-semibold text-text">{{ formatter.formatExact(amount(), currency()) }}</span>
+      <span class="font-semibold text-text">{{ formatter.format(amount(), currency()) }}</span>
     </div>
   }
 

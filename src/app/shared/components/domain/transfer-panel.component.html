@@ -10,7 +10,7 @@
         </span>
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold text-text">{{ me().name }}</p>
-          <p class="text-xs text-text-secondary">{{ formatter.formatExact(me().cash, currency()) }}</p>
+          <p class="text-xs text-text-secondary">{{ formatter.format(me().cash, currency()) }}</p>
         </div>
       </div>
     </div>
@@ -162,21 +162,21 @@
           [class.text-text]="!insufficient()"
           [class.text-negative]="insufficient()"
         >
-          {{ formatter.formatExact(total(), currency()) }}
+          {{ formatter.format(total(), currency()) }}
         </span>
       </div>
 
       @if (!insufficient()) {
         <p class="mt-2 text-text-secondary">
           Te quedará
-          <span class="font-semibold text-text">{{ formatter.formatExact(remaining(), currency()) }}</span>
+          <span class="font-semibold text-text">{{ formatter.format(remaining(), currency()) }}</span>
         </p>
       } @else {
         <div class="mt-2 space-y-1">
           <p class="font-semibold text-negative">Dinero insuficiente</p>
           <p class="text-xs text-text-secondary">
-            Necesitas {{ formatter.formatExact(total(), currency()) }} para completar esta transferencia.
-            Tu saldo disponible es {{ formatter.formatExact(me().cash, currency()) }}.
+            Necesitas {{ formatter.format(total(), currency()) }} para completar esta transferencia.
+            Tu saldo disponible es {{ formatter.format(me().cash, currency()) }}.
           </p>
         </div>
       }
@@ -198,9 +198,9 @@
   <app-button [fullWidth]="true" [disabled]="!canSubmit()" (clickAction)="submit()">
     @if (total() > 0) {
       @if (insufficient()) {
-        Conseguir efectivo y transferir {{ formatter.formatExact(total(), currency()) }}
+        Conseguir efectivo y transferir {{ formatter.format(total(), currency()) }}
       } @else {
-        Transferir {{ formatter.formatExact(total(), currency()) }}
+        Transferir {{ formatter.format(total(), currency()) }}
       }
     } @else {
       Transferir

@@ -14,6 +14,7 @@ import { ICONS } from '../../icons';
 import type { CurrencyConfig, Edition, Player } from '../../../core/models';
 import { DebtAssistanceService, type DebtPayment } from '../../../core/services/debt-assistance.service';
 import type { EvaluatedDebtAction } from '../../../core/services/liquidation.service';
+import { MoneyFormatService } from '../../../core/services/money-format.service';
 
 interface SellPropertyPlan {
   propertyId: string;
@@ -46,6 +47,7 @@ interface SellGroupPlan {
 })
 export class DebtAssistDialogComponent {
   private readonly debtService = inject(DebtAssistanceService);
+  private readonly moneyFormatter = inject(MoneyFormatService);
 
   readonly open = input.required<boolean>();
   readonly me = input.required<Player>();
@@ -190,7 +192,7 @@ export class DebtAssistDialogComponent {
   }
 
   private format(amount: number): string {
-    return amount.toLocaleString('es-ES');
+    return this.moneyFormatter.format(amount, this.currency());
   }
 
   protected reasonId(id: string): string {

@@ -965,7 +965,7 @@ export class GameComponent {
           const toPlayer = this.room()?.players.find((p) => p.id === recipientId);
           this.toastService.success(
             `Recibiste ${this.formatScaled(entry.amount)} del Banco`,
-            `${entry.description} · Saldo: ${this.formatExact(toPlayer?.cash ?? entry.amount)}`,
+            `${entry.description} · Saldo: ${this.formatScaled(toPlayer?.cash ?? entry.amount)}`,
           );
           this.soundService.play('cashIn');
         } else if (actorIdMeta !== myId && recipientId && recipientId !== myId) {
@@ -983,20 +983,13 @@ export class GameComponent {
   protected format(amount: number): string {
     const currency = this.edition()?.currency;
     if (!currency) return `${amount}`;
-    const symbol = currency.symbol;
-    return `${symbol}${amount.toLocaleString('es-ES')}`;
+    return this.moneyFormatter.format(amount, currency);
   }
 
   protected formatScaled(amount: number): string {
     const currency = this.edition()?.currency;
     if (!currency) return `${amount}`;
     return this.moneyFormatter.format(amount, currency);
-  }
-
-  protected formatExact(amount: number): string {
-    const currency = this.edition()?.currency;
-    if (!currency) return `${amount}`;
-    return this.moneyFormatter.formatExact(amount, currency);
   }
 
   private notifyTradeReceived(offer: TradeOffer): void {

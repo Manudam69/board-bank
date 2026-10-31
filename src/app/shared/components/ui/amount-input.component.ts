@@ -84,7 +84,7 @@ export class AmountInputComponent {
   });
 
   readonly preview = computed(() => {
-    return this.formatter.formatExact(this.value(), this.currency());
+    return this.formatter.format(this.value(), this.currency());
   });
 
   readonly exceedsMax = computed(() => {

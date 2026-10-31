@@ -2,12 +2,14 @@ import {
   Component,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
 } from '@angular/core';
 import type { CurrencyConfig, Edition, Player, PropertyMetadata } from '../../../core/models';
 import { unmortgageCost } from '../../../core/services/property.service';
+import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { BalanceComponent } from '../../components/ui/balance.component';
 import { ButtonComponent } from '../../components/ui/button.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
@@ -37,6 +39,8 @@ interface MortgageItem {
   templateUrl: './mortgage-panel.component.html',
 })
 export class MortgagePanelComponent {
+  private readonly moneyFormatter = inject(MoneyFormatService);
+
   readonly edition = input.required<Edition>();
   readonly me = input.required<Player>();
   readonly currency = input.required<CurrencyConfig>();
@@ -156,7 +160,7 @@ export class MortgagePanelComponent {
   }
 
   protected format(amount: number): string {
-    return this.currency().symbol + amount.toLocaleString('es-ES');
+    return this.moneyFormatter.format(amount, this.currency());
   }
 
   private buildingLabel(owned: import('../../../core/models').PlayerProperty): string | null {

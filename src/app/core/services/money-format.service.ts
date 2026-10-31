@@ -57,14 +57,6 @@ export class MoneyFormatService {
     return Math.round(value * this.scales[currency.scale]);
   }
 
-  formatExact(amount: number, currency: CurrencyConfig): string {
-    const value = Math.max(0, Math.round(amount));
-    const withGroups = value.toLocaleString('en-US', {
-      maximumFractionDigits: 0,
-    });
-    return `${currency.symbol}${withGroups}`;
-  }
-
   computeScaleSteps(edition: Edition): ScaleSelection {
     const base = SCALE_STEPS[0];
     const scaleStep = this.getScaleStep(edition.currency.scale);

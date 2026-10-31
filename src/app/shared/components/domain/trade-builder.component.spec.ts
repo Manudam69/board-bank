@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { TradeBuilderComponent } from './trade-builder.component';
+import { TradeBuilderComponent, type TradeProposal } from './trade-builder.component';
 import { CLASSIC_SPAIN } from '../../../core/constants/editions';
-import type { Player, PlayerProperty } from '../../../core/models';
+import type { Player } from '../../../core/models';
 
 const p1 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p1')!;
 const p3 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p3')!;
@@ -51,54 +51,115 @@ describe('TradeBuilderComponent', () => {
     return fixture;
   }
 
-  it('renders a visible color bar with the correct groupColor for every property option', () => {
-    const fixture = createFixture();
-    const bars = fixture.nativeElement.querySelectorAll('app-property-group-bar span[aria-hidden="true"]');
-    expect(bars.length).toBeGreaterThanOrEqual(2);
+  function buttons(fixture: ReturnType<typeof createFixture>): HTMLElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLElement[];
+  }
 
-    const firstBar = bars[0] as HTMLElement;
-    expect(firstBar.classList.contains('h-6')).toBe(true);
-    expect(firstBar.classList.contains('w-1.5')).toBe(true);
-    expect(firstBar.style.backgroundColor).toBe('rgb(139, 69, 19)'); // p1 groupColor #8B4513
+  function clickByText(fixture: ReturnType<typeof createFixture>, text: string): void {
+    const target = buttons(fixture).find((b) => b.textContent?.includes(text));
+    expect(target, `button "${text}"`).toBeTruthy();
+    target!.click();
+    fixture.detectChanges();
+  }
+
+  it('starts by asking who to trade with, listing only the other players', () => {
+    const fixture = createFixture();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('¿Con quién quieres intercambiar?');
+    expect(text).toContain('Ben');
+    expect(text).not.toContain('Ana');
+    expect(text).not.toContain(p1.name);
   });
 
-  it('renders a color bar for the railroad using its own groupColor', () => {
+  it('advances to the "give" step as soon as a player is tapped', () => {
     const fixture = createFixture();
-    const benChip = Array.from(fixture.nativeElement.querySelectorAll('[role="radio"]')).find((b) =>
-      (b as HTMLElement).textContent?.includes('Ben'),
+    clickByText(fixture, 'Ben');
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('¿Qué le das tú?');
+    expect(text).toContain(p1.name);
+  });
+
+  it('renders the group color bar for each of my properties', () => {
+    const fixture = createFixture();
+    clickByText(fixture, 'Ben');
+
+    const bar = fixture.nativeElement.querySelector(
+      'app-property-group-bar span[aria-hidden="true"]',
     ) as HTMLElement;
-    expect(benChip).toBeTruthy();
-    benChip.click();
-    fixture.detectChanges();
-
-    const receiverButtons = Array.from(
-      fixture.nativeElement.querySelectorAll('button'),
-    ).filter((b) => (b as HTMLElement).textContent?.includes(railroad.name)) as HTMLElement[];
-
-    expect(receiverButtons.length).toBe(1);
-    const bar = receiverButtons[0].querySelector('app-property-group-bar span[aria-hidden="true"]') as HTMLElement;
-    expect(bar).toBeTruthy();
     expect(bar.classList.contains('h-6')).toBe(true);
     expect(bar.classList.contains('w-1.5')).toBe(true);
+    expect(bar.style.backgroundColor).toBe('rgb(139, 69, 19)'); // p1 groupColor #8B4513
+  });
+
+  it('marks selected properties and explains why built-up ones are locked', () => {
+    const fixture = createFixture();
+    clickByText(fixture, 'Ben');
+
+    const p1Button = buttons(fixture).find((b) => b.textContent?.includes(p1.name))!;
+    const p3Button = buttons(fixture).find((b) => b.textContent?.includes(p3.name))!;
+
+    expect(p1Button.getAttribute('aria-checked')).toBe('false');
+    p1Button.click();
+    fixture.detectChanges();
+    expect(p1Button.getAttribute('aria-checked')).toBe('true');
+
+    expect(p3Button.getAttribute('aria-disabled')).toBe('true');
+    expect(p3Button.textContent).toContain('Tiene edificios');
+    p3Button.click();
+    fixture.detectChanges();
+    expect(p3Button.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('shows the partner\'s properties on the "receive" step using their own group color', () => {
+    const fixture = createFixture();
+    clickByText(fixture, 'Ben');
+    clickByText(fixture, 'Siguiente');
+
+    expect(fixture.nativeElement.textContent).toContain('¿Qué quieres recibir?');
+    const railroadButton = buttons(fixture).find((b) => b.textContent?.includes(railroad.name))!;
+    const bar = railroadButton.querySelector('app-property-group-bar span[aria-hidden="true"]') as HTMLElement;
     expect(bar.style.backgroundColor).toBe('rgb(0, 0, 0)'); // railroad groupColor #000000
     expect(bar.classList.contains('ring-1')).toBe(true);
   });
 
-  it('shows a checkmark on selected properties and a lock on disabled ones', () => {
+  it('refuses to send an empty offer and says why', () => {
     const fixture = createFixture();
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLElement[];
+    clickByText(fixture, 'Ben');
+    clickByText(fixture, 'Siguiente');
+    clickByText(fixture, 'Revisar oferta');
 
-    const p1Button = buttons.find((b) => (b as HTMLElement).textContent?.includes(p1.name))!;
-    const p3Button = buttons.find((b) => (b as HTMLElement).textContent?.includes(p3.name))!;
+    expect(fixture.nativeElement.textContent).toContain('Revisa tu oferta');
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('vacía');
+    const send = buttons(fixture).find((b) => b.textContent?.includes('Enviar oferta'))!;
+    expect((send as HTMLButtonElement).disabled).toBe(true);
+  });
 
-    p1Button.click();
-    fixture.detectChanges();
+  it('emits the proposal and stays on the review step so the sheet does not change while closing', () => {
+    const fixture = createFixture();
+    const proposals: TradeProposal[] = [];
+    fixture.componentInstance.proposeAction.subscribe((p) => proposals.push(p));
 
-    const p1Check = p1Button.querySelector('svg path[d="M5 13l4 4L19 7"]');
-    expect(p1Check).toBeTruthy();
+    clickByText(fixture, 'Ben');
+    clickByText(fixture, p1.name);
+    clickByText(fixture, 'Siguiente');
+    clickByText(fixture, railroad.name);
+    clickByText(fixture, 'Revisar oferta');
+    clickByText(fixture, 'Enviar oferta');
 
-    const p3Lock = p3Button.querySelector('svg path[d*="M12 15v2"]') ??
-      p3Button.querySelector('svg path[d*="v4h8z"]');
-    expect(p3Lock).toBeTruthy();
+    expect(proposals).toEqual([
+      { toId: 'u2', fromCash: 0, toCash: 0, fromProperties: [p1.id], toProperties: [railroad.id] },
+    ]);
+    expect(fixture.nativeElement.textContent).toContain('Revisa tu oferta');
+  });
+
+  it('lets the user go back to change a side from the review step', () => {
+    const fixture = createFixture();
+    clickByText(fixture, 'Ben');
+    clickByText(fixture, 'Siguiente');
+    clickByText(fixture, 'Revisar oferta');
+    clickByText(fixture, 'Editar');
+
+    expect(fixture.nativeElement.textContent).toContain('¿Qué le das tú?');
   });
 });

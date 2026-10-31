@@ -398,13 +398,15 @@
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    <app-trade-builder
-      [edition]="edition()!"
-      [me]="currentPlayer()!"
-      [players]="room()!.players"
-      [currency]="edition()!.currency"
-      (proposeAction)="onProposeTrade($event)"
-    />
+    @for (session of [tradeSession()]; track session) {
+      <app-trade-builder
+        [edition]="edition()!"
+        [me]="currentPlayer()!"
+        [players]="room()!.players"
+        [currency]="edition()!.currency"
+        (proposeAction)="onProposeTrade($event)"
+      />
+    }
   }
 </app-modal>
 

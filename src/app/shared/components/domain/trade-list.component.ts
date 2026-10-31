@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import type { CurrencyConfig, Edition, Player, TradeOffer } from '../../../core/models';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { ButtonComponent } from '../ui/button.component';
@@ -9,7 +9,7 @@ type ResolvedTrade = TradeOffer & { status: 'accepted' | 'rejected' | 'cancelled
 @Component({
   selector: 'app-trade-list',
   standalone: true,
-  imports: [DatePipe, ButtonComponent],
+  imports: [DatePipe, NgTemplateOutlet, ButtonComponent],
   templateUrl: './trade-list.component.html',
 })
 export class TradeListComponent {
@@ -55,6 +55,28 @@ export class TradeListComponent {
       .map((id) => this.edition().properties.find((p) => p.id === id)?.name)
       .filter(Boolean)
       .join(', ') || '—';
+  }
+
+  protected propertyList(ids: string[]): string[] {
+    return ids
+      .map((id) => this.edition().properties.find((p) => p.id === id)?.name)
+      .filter((name): name is string => !!name);
+  }
+
+  /** The offer described from the current player's point of view. */
+  protected perspective(offer: TradeOffer): {
+    iAmSender: boolean;
+    otherName: string;
+    give: TradeOffer['fromItems'];
+    receive: TradeOffer['toItems'];
+  } {
+    const iAmSender = offer.fromPlayerId === this.currentPlayerId();
+    return {
+      iAmSender,
+      otherName: this.playerName(iAmSender ? offer.toPlayerId : offer.fromPlayerId),
+      give: iAmSender ? offer.fromItems : offer.toItems,
+      receive: iAmSender ? offer.toItems : offer.fromItems,
+    };
   }
 
   protected playerName(id: string): string {

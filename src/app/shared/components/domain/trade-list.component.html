@@ -1,8 +1,48 @@
+<ng-template #items let-items="items" let-tone="tone">
+  <ul class="mt-1 space-y-1" role="list">
+    @if (items.cash > 0) {
+      <li class="text-base font-bold tabular-nums" [class.text-negative]="tone === 'give'" [class.text-positive]="tone === 'receive'">
+        {{ format(items.cash) }}
+      </li>
+    }
+    @for (name of propertyList(items.propertyIds); track name) {
+      <li class="text-sm text-text">{{ name }}</li>
+    }
+    @if (items.cash <= 0 && items.propertyIds.length === 0) {
+      <li class="text-sm text-text-secondary">Nada</li>
+    }
+  </ul>
+</ng-template>
+
+<ng-template #summary let-offer="offer">
+  @let view = perspective(offer);
+  <p class="mt-3 text-sm text-text">
+    @if (view.iAmSender) {
+      Tu oferta a <span class="font-semibold">{{ view.otherName }}</span>
+    } @else {
+      <span class="font-semibold">{{ view.otherName }}</span> te propone un intercambio
+    }
+  </p>
+
+  <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div class="rounded-lg bg-surface-elevated p-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Tú das</p>
+      <ng-container [ngTemplateOutlet]="items" [ngTemplateOutletContext]="{ items: view.give, tone: 'give' }" />
+    </div>
+    <div class="rounded-lg bg-surface-elevated p-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Tú recibes</p>
+      <ng-container [ngTemplateOutlet]="items" [ngTemplateOutletContext]="{ items: view.receive, tone: 'receive' }" />
+    </div>
+  </div>
+</ng-template>
+
 <div class="space-y-5">
   <div class="space-y-3">
     @for (offer of pendingTrades(); track offer.id; let i = $index) {
       <div
-        class="stagger-in rounded-xl border border-border bg-surface p-4"
+        class="stagger-in rounded-xl border bg-surface p-4"
+        [class.border-accent]="canAccept(offer)"
+        [class.border-border]="!canAccept(offer)"
         [style.--i]="i < 8 ? i : 8"
       >
         <div class="flex items-center justify-between">
@@ -23,35 +63,21 @@
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            Pendiente
+            {{ canAccept(offer) ? 'Esperando tu respuesta' : 'Esperando respuesta' }}
           </span>
-          <time class="text-xs text-text-muted">{{ offer.createdAt | date: 'HH:mm:ss' }}</time>
+          <time class="text-xs text-text-secondary">{{ offer.createdAt | date: 'HH:mm' }}</time>
         </div>
 
-        <p class="mt-3 text-sm text-text">
-          <span class="font-semibold">{{ playerName(offer.fromPlayerId) }}</span> ofrece a
-          <span class="font-semibold">{{ playerName(offer.toPlayerId) }}</span>
-        </p>
+        <ng-container [ngTemplateOutlet]="summary" [ngTemplateOutletContext]="{ offer: offer }" />
 
-        <div class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <div class="rounded-lg bg-surface-elevated p-3">
-            <p class="mb-1 font-medium text-text-secondary">Ofrece:</p>
-            <p class="text-text">
-              Dinero: <span class="font-medium">{{ format(offer.fromItems.cash) }}</span>
-            </p>
-            <p class="text-text-secondary">Props: {{ propertyNames(offer.fromItems.propertyIds) }}</p>
-          </div>
-          <div class="rounded-lg bg-surface-elevated p-3">
-            <p class="mb-1 font-medium text-text-secondary">Recibe:</p>
-            <p class="text-text">
-              Dinero: <span class="font-medium">{{ format(offer.toItems.cash) }}</span>
-            </p>
-            <p class="text-text-secondary">Props: {{ propertyNames(offer.toItems.propertyIds) }}</p>
-          </div>
-        </div>
+        @if (canAccept(offer)) {
+          <p class="mt-3 text-xs text-text-secondary">
+            Si aceptas, el dinero y las propiedades cambian de manos al instante.
+          </p>
+        }
 
         @if (canAccept(offer) || canCancel(offer)) {
-          <div class="mt-4 grid grid-cols-2 gap-2 sm:flex">
+          <div class="mt-3 grid grid-cols-2 gap-2 sm:flex">
             @if (canCancel(offer)) {
               <app-button
                 class="col-span-2 sm:ml-auto"
@@ -62,10 +88,10 @@
                 Cancelar
               </app-button>
             } @else {
-              <app-button variant="secondary" [fullWidth]="true" (clickAction)="rejectAction.emit(offer.id)">
+              <app-button variant="secondary" size="lg" [fullWidth]="true" (clickAction)="rejectAction.emit(offer.id)">
                 Rechazar
               </app-button>
-              <app-button [fullWidth]="true" (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
+              <app-button size="lg" [fullWidth]="true" (clickAction)="acceptAction.emit(offer.id)">Aceptar</app-button>
             }
           </div>
         }
@@ -137,32 +163,12 @@
                   }
                 }
               </span>
-              <time class="text-xs text-text-muted">
-                {{ (offer.resolvedAt ?? offer.createdAt) | date: 'HH:mm:ss' }}
+              <time class="text-xs text-text-secondary">
+                {{ (offer.resolvedAt ?? offer.createdAt) | date: 'HH:mm' }}
               </time>
             </div>
 
-            <p class="mt-3 text-sm text-text">
-              <span class="font-semibold">{{ playerName(offer.fromPlayerId) }}</span> ofrece a
-              <span class="font-semibold">{{ playerName(offer.toPlayerId) }}</span>
-            </p>
-
-            <div class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-              <div class="rounded-lg bg-surface-elevated p-3">
-                <p class="mb-1 font-medium text-text-secondary">Ofrece:</p>
-                <p class="text-text">
-                  Dinero: <span class="font-medium">{{ format(offer.fromItems.cash) }}</span>
-                </p>
-                <p class="text-text-secondary">Props: {{ propertyNames(offer.fromItems.propertyIds) }}</p>
-              </div>
-              <div class="rounded-lg bg-surface-elevated p-3">
-                <p class="mb-1 font-medium text-text-secondary">Recibe:</p>
-                <p class="text-text">
-                  Dinero: <span class="font-medium">{{ format(offer.toItems.cash) }}</span>
-                </p>
-                <p class="text-text-secondary">Props: {{ propertyNames(offer.toItems.propertyIds) }}</p>
-              </div>
-            </div>
+            <ng-container [ngTemplateOutlet]="summary" [ngTemplateOutletContext]="{ offer: offer }" />
           </div>
         }
       </div>

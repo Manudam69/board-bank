@@ -1,222 +1,331 @@
-<div class="space-y-5">
-  <div class="space-y-2">
-    <p class="text-sm font-medium text-text-secondary">Ofertante</p>
-    <div class="rounded-xl border border-border bg-surface-elevated/50 p-3">
-      <div class="flex items-center gap-2">
-        <span
-          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
-          [style.background-color]="me().avatarColor"
-        >
-          {{ me().name.charAt(0).toUpperCase() }}
-        </span>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-semibold text-text">{{ me().name }}</p>
-          <p class="text-xs text-text-secondary">{{ me().cash | money: currency() }}</p>
-        </div>
+<ng-template #picker let-groups="groups" let-selected="selected" let-side="side" let-emptyText="emptyText">
+  <div class="space-y-4">
+    @for (g of groups; track g.group) {
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">{{ g.group }}</p>
+        <ul class="flex flex-col gap-2" role="list">
+          @for (option of g.items; track option.meta.id) {
+            <li>
+              <button
+                type="button"
+                role="checkbox"
+                class="flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition focus:outline-none"
+                [class.border-accent]="!option.hasBuildings && selected.has(option.meta.id)"
+                [class.bg-accent-muted]="!option.hasBuildings && selected.has(option.meta.id)"
+                [class.border-border]="option.hasBuildings || !selected.has(option.meta.id)"
+                [class.bg-surface-elevated]="!option.hasBuildings && !selected.has(option.meta.id)"
+                [class.bg-surface-elevated/40]="option.hasBuildings"
+                [class.opacity-70]="option.hasBuildings"
+                [attr.aria-checked]="selected.has(option.meta.id)"
+                [attr.aria-disabled]="option.hasBuildings"
+                (click)="side === 'give' ? toggleFrom(option) : toggleTo(option)"
+              >
+                <app-property-group-bar [groupColor]="option.meta.groupColor" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm font-medium text-text">{{ option.meta.name }}</span>
+                  <span class="block text-xs text-text-secondary">
+                    @if (option.hasBuildings) {
+                      Tiene edificios: véndelos al Banco primero
+                    } @else {
+                      @if (option.mortgaged) { Hipotecada · }
+                      {{ option.meta.price | money: currency() }}
+                    }
+                  </span>
+                </span>
+                @if (option.hasBuildings) {
+                  <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                } @else {
+                  <span
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
+                    [class.border-accent]="selected.has(option.meta.id)"
+                    [class.bg-accent]="selected.has(option.meta.id)"
+                    [class.border-border]="!selected.has(option.meta.id)"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      class="h-4 w-4 text-white transition-opacity"
+                      [class.opacity-0]="!selected.has(option.meta.id)"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
       </div>
-    </div>
+    } @empty {
+      <p class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+        {{ emptyText }}
+      </p>
+    }
   </div>
+</ng-template>
 
-  <div class="space-y-2">
-    <p class="text-sm font-medium text-text-secondary">Receptor del intercambio</p>
-    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Receptor">
-      @for (p of eligibleTo(); track p.id) {
-        <button
-          type="button"
-          role="radio"
-          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
-          [class.border-accent]="toId() === p.id"
-          [class.bg-accent-muted]="toId() === p.id"
-          [class.text-text]="toId() === p.id"
-          [class.border-border]="toId() !== p.id"
-          [class.bg-surface-elevated]="toId() !== p.id"
-          [class.text-text-secondary]="toId() !== p.id"
-          [class.hover:bg-surface-hover]="toId() !== p.id"
-          [attr.aria-checked]="toId() === p.id"
-          (click)="selectTo(p.id)"
-        >
+<div class="flex flex-col gap-4" [class.pb-4]="step() === 'player'">
+  <nav aria-label="Pasos del intercambio">
+    <ol class="flex items-start gap-1.5">
+      @for (s of steps; track s; let i = $index) {
+        <li class="flex flex-1 flex-col gap-1" [attr.aria-current]="s === step() ? 'step' : null">
           <span
-            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-            [style.background-color]="p.avatarColor"
+            class="h-1 rounded-full transition-colors duration-300"
+            [class.bg-accent]="i <= stepIndex()"
+            [class.bg-border]="i > stepIndex()"
+            aria-hidden="true"
+          ></span>
+          <span
+            class="text-[11px] font-medium"
+            [class.text-text]="i === stepIndex()"
+            [class.text-text-secondary]="i !== stepIndex()"
           >
-            {{ p.name.charAt(0).toUpperCase() }}
+            {{ i + 1 }}. {{ stepLabel(s) }}
           </span>
-          <span class="truncate max-w-[8rem]">{{ p.name }}</span>
-        </button>
+        </li>
+      }
+    </ol>
+  </nav>
+
+  @for (current of [step()]; track current) {
+    <div [class]="motion()" class="flex flex-col gap-4">
+      <div class="space-y-1">
+        <h3 class="text-xl font-semibold text-text" aria-live="polite">{{ stepTitle(current) }}</h3>
+        @switch (current) {
+          @case ('player') {
+            <p class="text-sm text-text-secondary">Toca a un jugador y pasamos al siguiente paso.</p>
+          }
+          @case ('give') {
+            <p class="text-sm text-text-secondary">
+              Lo que le entregas a <strong class="font-semibold text-text">{{ partner()?.name }}</strong>.
+              Si no das dinero o propiedades, déjalo vacío.
+            </p>
+          }
+          @case ('receive') {
+            <p class="text-sm text-text-secondary">
+              Lo que te entrega <strong class="font-semibold text-text">{{ partner()?.name }}</strong>.
+              Si no pides nada de algo, déjalo vacío.
+            </p>
+          }
+          @case ('review') {
+            <p class="text-sm text-text-secondary">
+              <strong class="font-semibold text-text">{{ partner()?.name }}</strong> verá la oferta y podrá
+              aceptarla o rechazarla. No se mueve nada hasta que acepte.
+            </p>
+          }
+        }
+      </div>
+
+      @switch (current) {
+        @case ('player') {
+          <ul class="flex flex-col gap-2" role="list">
+            @for (player of eligibleTo(); track player.id) {
+              <li>
+                <button
+                  type="button"
+                  class="flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus:outline-none"
+                  [class.border-accent]="toId() === player.id"
+                  [class.bg-accent-muted]="toId() === player.id"
+                  [class.border-border]="toId() !== player.id"
+                  [class.bg-surface-elevated]="toId() !== player.id"
+                  (click)="selectTo(player.id)"
+                >
+                  <span
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white {{ player.avatarColor }}"
+                    aria-hidden="true"
+                  >
+                    {{ initials(player.name) }}
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate font-semibold text-text">{{ player.name }}</span>
+                    <span class="block text-xs text-text-secondary">
+                      {{ player.cash | money: currency() }} · {{ propertyCount(player) }}
+                      {{ propertyCount(player) === 1 ? 'propiedad' : 'propiedades' }}
+                    </span>
+                  </span>
+                  <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+                  </svg>
+                </button>
+              </li>
+            } @empty {
+              <li class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+                No hay otros jugadores con quién intercambiar.
+              </li>
+            }
+          </ul>
+        }
+
+        @case ('give') {
+          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que das">
+            <app-amount-input
+              [(amount)]="fromCash"
+              [edition]="edition()"
+              [currency]="currency()"
+              label="Dinero que das"
+              [max]="me().cash"
+            />
+            <p class="mt-1 text-xs text-text-secondary">Tienes {{ me().cash | money: currency() }}</p>
+          </section>
+
+          <section class="space-y-3" aria-label="Propiedades que das">
+            <h4 class="text-sm font-semibold text-text">Tus propiedades</h4>
+            <ng-container
+              [ngTemplateOutlet]="picker"
+              [ngTemplateOutletContext]="{
+                groups: myPropertyGroups(),
+                selected: fromProperties(),
+                side: 'give',
+                emptyText: 'No tienes propiedades para ofrecer.'
+              }"
+            />
+          </section>
+        }
+
+        @case ('receive') {
+          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que recibes">
+            <app-amount-input
+              [(amount)]="toCash"
+              [edition]="edition()"
+              [currency]="currency()"
+              label="Dinero que recibes"
+              [max]="partner()?.cash"
+            />
+            <p class="mt-1 text-xs text-text-secondary">
+              {{ partner()?.name }} tiene {{ (partner()?.cash ?? 0) | money: currency() }}
+            </p>
+          </section>
+
+          <section class="space-y-3" aria-label="Propiedades que recibes">
+            <h4 class="text-sm font-semibold text-text">Propiedades de {{ partner()?.name }}</h4>
+            <ng-container
+              [ngTemplateOutlet]="picker"
+              [ngTemplateOutletContext]="{
+                groups: partnerPropertyGroups(),
+                selected: toProperties(),
+                side: 'receive',
+                emptyText: partner()?.name + ' no tiene propiedades.'
+              }"
+            />
+          </section>
+        }
+
+        @case ('review') {
+          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que das">
+            <div class="flex items-center justify-between gap-2">
+              <h4 class="text-sm font-semibold text-negative">Tú das</h4>
+              <button
+                type="button"
+                class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+                (click)="goTo('give')"
+              >
+                Editar
+              </button>
+            </div>
+            <ul class="mt-1 space-y-2" role="list">
+              @if (fromCash() > 0) {
+                <li class="text-lg font-bold tabular-nums text-text">{{ fromCash() | money: currency() }}</li>
+              }
+              @for (option of fromSelection(); track option.meta.id) {
+                <li class="flex items-center gap-3 text-sm text-text">
+                  <app-property-group-bar [groupColor]="option.meta.groupColor" />
+                  <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
+                </li>
+              }
+              @if (fromCash() <= 0 && fromSelection().length === 0) {
+                <li class="text-sm text-text-secondary">Nada</li>
+              }
+            </ul>
+          </section>
+
+          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que recibes">
+            <div class="flex items-center justify-between gap-2">
+              <h4 class="text-sm font-semibold text-positive">Tú recibes</h4>
+              <button
+                type="button"
+                class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+                (click)="goTo('receive')"
+              >
+                Editar
+              </button>
+            </div>
+            <ul class="mt-1 space-y-2" role="list">
+              @if (toCash() > 0) {
+                <li class="text-lg font-bold tabular-nums text-text">{{ toCash() | money: currency() }}</li>
+              }
+              @for (option of toSelection(); track option.meta.id) {
+                <li class="flex items-center gap-3 text-sm text-text">
+                  <app-property-group-bar [groupColor]="option.meta.groupColor" />
+                  <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
+                </li>
+              }
+              @if (toCash() <= 0 && toSelection().length === 0) {
+                <li class="text-sm text-text-secondary">Nada</li>
+              }
+            </ul>
+          </section>
+
+          @if (blocker(); as message) {
+            <p
+              class="rounded-xl border border-negative/30 bg-danger-muted p-3 text-sm text-negative"
+              role="alert"
+            >
+              {{ message }}
+            </p>
+          }
+        }
       }
     </div>
-  </div>
+  }
 
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <div class="rounded-xl border border-border bg-surface p-4">
-      <h4 class="mb-3 text-sm font-semibold text-text">Tú das</h4>
-      <app-amount-input
-        [(amount)]="fromCash"
-        [edition]="edition()"
-        [currency]="currency()"
-        label="Dinero"
-        [max]="me().cash"
-      />
-      <div class="mt-3">
-        <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
-        <div class="grid grid-cols-1 gap-2">
-          @for (property of myPropertiesList(); track property.meta.id) {
-            <button
-              type="button"
-              class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition"
-              [class.border-accent]="
-                !property.hasBuildings && fromProperties().has(property.meta.id)
-              "
-              [class.bg-accent-muted]="
-                !property.hasBuildings && fromProperties().has(property.meta.id)
-              "
-              [class.text-text]="!property.hasBuildings && fromProperties().has(property.meta.id)"
-              [class.border-border]="!fromProperties().has(property.meta.id)"
-              [class.bg-surface-elevated]="
-                !property.hasBuildings && !fromProperties().has(property.meta.id)
-              "
-              [class.bg-surface-elevated/50]="property.hasBuildings"
-              [class.text-text-secondary]="
-                !property.hasBuildings && !fromProperties().has(property.meta.id)
-              "
-              [class.text-text-muted]="property.hasBuildings"
-              [class.opacity-60]="property.hasBuildings"
-              [class.cursor-not-allowed]="property.hasBuildings"
-              [class.hover:bg-surface-hover]="
-                !property.hasBuildings && !fromProperties().has(property.meta.id)
-              "
-              [attr.aria-disabled]="property.hasBuildings"
-              [attr.title]="
-                property.hasBuildings
-                  ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.'
-                  : null
-              "
-              [attr.aria-label]="ariaLabel(property.meta)"
-              (click)="toggleFrom(property)"
-            >
-              <app-property-group-bar [groupColor]="property.meta.groupColor" />
-              <span class="truncate">{{ property.meta.name }}</span>
-              @if (!property.hasBuildings && fromProperties().has(property.meta.id)) {
-                <svg
-                  class="ml-auto h-4 w-4 shrink-0 text-accent"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  aria-hidden="true"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              }
-              @if (property.hasBuildings) {
-                <svg
-                  class="ml-auto h-4 w-4 shrink-0 text-text-muted"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              }
-            </button>
-          } @empty {
-            <p class="text-sm text-text-muted">No tienes propiedades disponibles.</p>
-          }
-        </div>
+  @if (step() !== 'player') {
+    <footer class="sheet-footer">
+      @switch (step()) {
+        @case ('give') {
+          @let given = fromProperties().size;
+          <p class="mb-2 truncate text-xs text-text-secondary">
+            @if (fromCash() <= 0 && given === 0) {
+              Todavía no das nada
+            } @else {
+              Das:
+              @if (fromCash() > 0) { {{ fromCash() | money: currency() }} }
+              @if (fromCash() > 0 && given > 0) { + }
+              @if (given > 0) { {{ given }} {{ given === 1 ? 'propiedad' : 'propiedades' }} }
+            }
+          </p>
+        }
+        @case ('receive') {
+          @let received = toProperties().size;
+          <p class="mb-2 truncate text-xs text-text-secondary">
+            @if (toCash() <= 0 && received === 0) {
+              Todavía no pides nada
+            } @else {
+              Recibes:
+              @if (toCash() > 0) { {{ toCash() | money: currency() }} }
+              @if (toCash() > 0 && received > 0) { + }
+              @if (received > 0) { {{ received }} {{ received === 1 ? 'propiedad' : 'propiedades' }} }
+            }
+          </p>
+        }
+      }
+
+      <div class="flex gap-2">
+        <app-button variant="secondary" size="lg" (clickAction)="back()">Atrás</app-button>
+        @if (step() === 'review') {
+          <app-button class="min-w-0 flex-1" [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
+            Enviar oferta
+          </app-button>
+        } @else {
+          <app-button class="min-w-0 flex-1" [fullWidth]="true" size="lg" (clickAction)="next()">
+            {{ step() === 'give' ? 'Siguiente' : 'Revisar oferta' }}
+          </app-button>
+        }
       </div>
-    </div>
-
-    <div class="rounded-xl border border-border bg-surface p-4">
-      <h4 class="mb-3 text-sm font-semibold text-text">Recibes</h4>
-      <app-amount-input
-        [(amount)]="toCash"
-        [edition]="edition()"
-        [currency]="currency()"
-        label="Dinero"
-      />
-      <div class="mt-3">
-        <p class="mb-2 text-sm font-medium text-text-secondary">Propiedades</p>
-        <div class="grid grid-cols-1 gap-2">
-          @for (property of toPropertiesList(); track property.meta.id) {
-            <button
-              type="button"
-              class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition"
-              [class.border-accent]="!property.hasBuildings && toProperties().has(property.meta.id)"
-              [class.bg-accent-muted]="
-                !property.hasBuildings && toProperties().has(property.meta.id)
-              "
-              [class.text-text]="!property.hasBuildings && toProperties().has(property.meta.id)"
-              [class.border-border]="!toProperties().has(property.meta.id)"
-              [class.bg-surface-elevated]="
-                !property.hasBuildings && !toProperties().has(property.meta.id)
-              "
-              [class.bg-surface-elevated/50]="property.hasBuildings"
-              [class.text-text-secondary]="
-                !property.hasBuildings && !toProperties().has(property.meta.id)
-              "
-              [class.text-text-muted]="property.hasBuildings"
-              [class.opacity-60]="property.hasBuildings"
-              [class.cursor-not-allowed]="property.hasBuildings"
-              [class.hover:bg-surface-hover]="
-                !property.hasBuildings && !toProperties().has(property.meta.id)
-              "
-              [attr.aria-disabled]="property.hasBuildings"
-              [attr.title]="
-                property.hasBuildings
-                  ? 'No puedes intercambiar esta propiedad mientras tenga casas o hoteles. Vende las edificaciones al Banco primero.'
-                  : null
-              "
-              [attr.aria-label]="ariaLabel(property.meta)"
-              (click)="toggleTo(property)"
-            >
-              <app-property-group-bar [groupColor]="property.meta.groupColor" />
-              <span class="truncate">{{ property.meta.name }}</span>
-              @if (!property.hasBuildings && toProperties().has(property.meta.id)) {
-                <svg
-                  class="ml-auto h-4 w-4 shrink-0 text-accent"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  aria-hidden="true"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              }
-              @if (property.hasBuildings) {
-                <svg
-                  class="ml-auto h-4 w-4 shrink-0 text-text-muted"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              }
-            </button>
-          } @empty {
-            <p class="text-sm text-text-muted">El receptor no tiene propiedades disponibles.</p>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <footer class="sheet-footer">
-    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
-      Proponer intercambio
-    </app-button>
-  </footer>
+    </footer>
+  }
 </div>

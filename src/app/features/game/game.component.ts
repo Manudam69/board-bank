@@ -161,6 +161,8 @@ export class GameComponent {
   readonly joinName = signal('');
   readonly joining = signal(false);
   readonly activeTab = signal('me');
+  /** Bumped every time the trade modal opens so each offer starts from a clean first step. */
+  protected readonly tradeSession = signal(0);
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   readonly activeAction = signal<BankAction | null>(null);
   readonly rentContextPlayerId = signal<string | undefined>(undefined);
@@ -335,6 +337,7 @@ export class GameComponent {
 
   protected openAction(action: BankAction): void {
     this.rentContextPlayerId.set(undefined);
+    if (action === 'trade') this.tradeSession.update((n) => n + 1);
     this.activeAction.set(action);
   }
 

@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { doc, onSnapshot, runTransaction, updateDoc, type Unsubscribe } from 'firebase/firestore';
+import { doc, getDocFromServer, onSnapshot, runTransaction, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { ActiveRoomService } from './active-room.service';
 import { FirebaseInitService } from './firebase-init.service';
 import { cleanFirestoreData } from '../utils/clean-firestore-data';
@@ -15,16 +15,18 @@ export class GameStateService {
   private unsub?: Unsubscribe;
   private heartbeatTimer?: ReturnType<typeof setInterval>;
   private subscribedRoomId?: string;
+  private subscriptionVersion = 0;
 
   readonly room = signal<Room | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly connected = signal(false);
 
-  subscribe(roomId: string): void {
+  subscribe(roomId: string, preserveRoom = false): void {
+    this.subscriptionVersion++;
     this.unsub?.();
     this.stopHeartbeat();
-    this.loading.set(true);
+    this.loading.set(!preserveRoom);
     this.error.set(null);
     this.connected.set(false);
     this.subscribedRoomId = roomId;
@@ -58,11 +60,31 @@ export class GameStateService {
   }
 
   unsubscribe(): void {
+    this.subscriptionVersion++;
     this.unsub?.();
     this.unsub = undefined;
+    this.subscribedRoomId = undefined;
     this.stopHeartbeat();
     this.room.set(null);
     this.connected.set(false);
+  }
+
+  async refresh(): Promise<void> {
+    const version = this.subscriptionVersion;
+    const roomId = this.subscribedRoomId;
+    if (!roomId) throw new Error('No hay una sala conectada para actualizar.');
+    const snap = await getDocFromServer(doc(this.db, 'rooms', roomId));
+    if (version !== this.subscriptionVersion) return;
+    if (!snap.exists()) throw new Error('La sala ya no existe.');
+    const room = snap.data() as Room;
+    const current = this.room();
+    if (!current || (room.updatedAt ?? 0) >= (current.updatedAt ?? 0)) {
+      this.room.set(room);
+    }
+    this.error.set(null);
+    this.loading.set(false);
+    if (room.status === 'finished') this.activeRoom.clear(roomId);
+    if (!this.connected()) this.subscribe(roomId, true);
   }
 
   private startHeartbeat(ref: ReturnType<typeof doc>): void {

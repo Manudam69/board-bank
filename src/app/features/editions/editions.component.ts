@@ -17,6 +17,10 @@ import type { CurrencyConfig, Edition, PropertyMetadata } from '../../core/model
   templateUrl: './editions.component.html',
 })
 export class EditionsComponent {
+  async refreshData(): Promise<void> {
+    await this.editionService.refresh();
+  }
+
   protected readonly router = inject(Router);
   private readonly editionService = inject(EditionService);
   private readonly formatter = inject(MoneyFormatService);

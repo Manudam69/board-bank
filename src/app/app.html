@@ -1,1 +1,3 @@
-<router-outlet />
+<app-pull-refresh [refresh]="refreshPage" [enabled]="activePage() !== null" [pageKey]="activePage()">
+  <router-outlet (activate)="onPageActivate($event)" (deactivate)="activePage.set(null)" />
+</app-pull-refresh>

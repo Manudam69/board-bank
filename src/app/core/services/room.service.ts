@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocFromServer, setDoc, updateDoc } from 'firebase/firestore';
 
 import { ActiveRoomService } from './active-room.service';
 import { FirebaseInitService } from './firebase-init.service';
@@ -27,8 +27,9 @@ export class RoomService {
     return uid;
   }
 
-  async getRoom(roomId: string): Promise<Room | null> {
-    const snap = await getDoc(doc(this.db, this.roomsCol(), roomId.toUpperCase()));
+  async getRoom(roomId: string, fromServer = false): Promise<Room | null> {
+    const ref = doc(this.db, this.roomsCol(), roomId.toUpperCase());
+    const snap = await (fromServer ? getDocFromServer(ref) : getDoc(ref));
     return snap.exists() ? (snap.data() as Room) : null;
   }
 

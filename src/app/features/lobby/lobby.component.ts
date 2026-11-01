@@ -31,6 +31,10 @@ const MAX_PLAYERS = 8;
   templateUrl: './lobby.component.html',
 })
 export class LobbyComponent {
+  async refreshData(): Promise<void> {
+    await Promise.all([this.gameState.refresh(), this.editions.refresh()]);
+  }
+
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly location = inject(Location);

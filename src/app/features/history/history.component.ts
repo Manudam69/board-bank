@@ -15,6 +15,10 @@ import { LogFeedComponent } from '../../shared/components/domain/log-feed.compon
   templateUrl: './history.component.html',
 })
 export class HistoryComponent {
+  async refreshData(): Promise<void> {
+    await Promise.all([this.gameState.refresh(), this.editions.refresh()]);
+  }
+
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);

@@ -1,5 +1,5 @@
 import { Service, inject, signal } from '@angular/core';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 
 import { AuthService } from './auth.service';
 import { FirebaseInitService } from './firebase-init.service';
@@ -47,8 +47,11 @@ export class ActiveRoomService {
     }
   }
 
-  async check(): Promise<void> {
-    if (this.checking()) return;
+  async check(fromServer = false): Promise<void> {
+    if (this.checking()) {
+      if (fromServer) throw new Error('La sala ya se está comprobando. Reintenta en unos segundos.');
+      return;
+    }
 
     const uid = this.auth.userId();
     const record = this.readRecord();
@@ -59,7 +62,8 @@ export class ActiveRoomService {
 
     this.checking.set(true);
     try {
-      const snap = await getDoc(doc(this.db, 'rooms', record.roomId));
+      const ref = doc(this.db, 'rooms', record.roomId);
+      const snap = await (fromServer ? getDocFromServer(ref) : getDoc(ref));
       const room = snap.exists() ? (snap.data() as Room) : null;
       const status = evaluateActiveRoom(room, uid, Date.now());
 
@@ -69,7 +73,8 @@ export class ActiveRoomService {
       } else {
         this.activeRoom.set(status.room);
       }
-    } catch {
+    } catch (error) {
+      if (fromServer) throw error;
       // On read errors (offline, permissions) don't clear the record; the user
       // may recover later. Just don't show the banner this time.
       this.activeRoom.set(null);

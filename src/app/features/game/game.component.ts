@@ -102,6 +102,10 @@ type BankActionMeta = 'salary' | 'income-tax' | 'luxury-tax' | 'jail-fine' | 'ba
   templateUrl: './game.component.html',
 })
 export class GameComponent {
+  async refreshData(): Promise<void> {
+    await Promise.all([this.gameState.refresh(), this.editions.refresh()]);
+  }
+
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);

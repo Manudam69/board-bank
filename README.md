@@ -12,6 +12,9 @@ BoardBank es una banca digital compartida para llevar las cuentas de una partida
 - Consultar los saldos, las propiedades de cada jugador y el registro de movimientos sincronizado. Algunas operaciones recientes pueden deshacerse por quien las realizó, mientras sigan siendo reversibles.
 - Declarar bancarrota, liquidar activos y, como anfitrión, finalizar la partida. Al terminar, se muestra una clasificación final y el historial.
 - Elegir entre ediciones predefinidas (Monopoly Clásico de España, Clásico de USA, Millonario y Banco Electrónico) o crear y editar ediciones propias con moneda, importes y propiedades personalizados.
+- En móvil, deslizar hacia abajo desde el inicio del scroll y soltar para actualizar los datos del servidor sin recargar la página ni perder la pestaña o los formularios. El indicador muestra solo una flecha y desaparece 400 ms después de actualizar; los mensajes de estado siguen disponibles para lectores de pantalla. Funciona en todas las pantallas, fuera de los modales; si falla la conexión, muestra el error y conserva los datos visibles. También hay un control «Actualizar datos» accesible con el teclado.
+
+El indicador de actualización acompaña el gesto con movimiento suave, vuelve a su posición al soltar y transforma la flecha en una palomita verde al terminar correctamente. Se desvanece en 160 ms tras la confirmación breve. Con movimiento reducido, evita los desplazamientos animados y muestra la palomita sin animar su trazo.
 
 BoardBank no tira los dados, mueve fichas ni detecta automáticamente el paso por casillas o la bancarrota: los jugadores registran esas operaciones manualmente. La app sirve como banca y libro de cuentas, no como sustituto del tablero.
 

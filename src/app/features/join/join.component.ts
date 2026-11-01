@@ -132,6 +132,25 @@ type JoinPageStatus = 'waiting-auth' | 'checking' | 'need-name' | 'joining' | 'e
   `,
 })
 export class JoinComponent {
+  async refreshData(): Promise<void> {
+    if (!this.auth.ready()) throw new Error('Espera a que termine la conexión.');
+    if (this.status() === 'joining' || this.status() === 'checking') {
+      throw new Error('Espera a que termine la operación actual.');
+    }
+    const room = await this.roomService.getRoom(this.roomId(), true);
+    if (!room) throw new Error('Sala no encontrada. Revisa el enlace.');
+    await this.editions.refresh();
+    this.room.set(room);
+    if (room.players.some((player) => player.id === this.auth.userId())) {
+      await this.router.navigate([room.status === 'finished' ? '/history' :
+        room.status === 'playing' ? '/game' : '/lobby', room.id]);
+      return;
+    }
+    if (room.status !== 'lobby') throw new Error('La partida ya ha comenzado o ha terminado.');
+    this.errorMessage.set('');
+    this.status.set('need-name');
+  }
+
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly auth = inject(AuthService);

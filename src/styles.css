@@ -64,6 +64,13 @@ body {
   color: var(--color-text);
 }
 
+@media (max-width: 767px) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
 /* Focus visible: accessible accent ring, offset so it pops on dark surfaces.
    Buttons and links that are circular use a tighter inset to avoid clipping. */
 *:focus-visible {
@@ -627,6 +634,86 @@ body {
     margin-inline: -1.5rem;
     padding: 1rem 1.5rem calc(1rem + var(--safe-bottom));
   }
+}
+
+.pull-refresh-indicator {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pull-refresh-arrow {
+  transition: rotate 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 140ms ease-out, scale 180ms ease-out;
+}
+
+.pull-refresh-success .pull-refresh-arrow {
+  opacity: 0;
+  scale: 0.7;
+}
+
+.pull-refresh-check {
+  animation: pull-refresh-confirm 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pull-refresh-check path {
+  stroke-dasharray: 1;
+  animation: pull-refresh-check-draw 180ms ease-out;
+}
+
+@keyframes pull-refresh-confirm {
+  from { opacity: 0; scale: 0.75; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes pull-refresh-check-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.pull-refresh-dragging,
+.pull-refresh-dragging .pull-refresh-arrow {
+  transition-duration: 80ms;
+  transition-timing-function: ease-out;
+}
+
+.pull-refresh-enter {
+  animation: pull-refresh-enter 180ms ease-out;
+}
+
+.pull-refresh-leave {
+  animation: pull-refresh-leave 160ms ease-in forwards;
+}
+
+@keyframes pull-refresh-enter {
+  from { opacity: 0; translate: 0 -10px; scale: 0.9; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+
+@keyframes pull-refresh-leave {
+  from { opacity: 1; translate: 0 0; scale: 1; }
+  to { opacity: 0; translate: 0 -8px; scale: 0.94; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pull-refresh-indicator,
+  .pull-refresh-arrow {
+    transition: none;
+  }
+
+  .pull-refresh-enter,
+  .pull-refresh-leave {
+    animation-name: pull-refresh-fade;
+  }
+
+  .pull-refresh-leave { animation-direction: reverse; }
+
+  .pull-refresh-check,
+  .pull-refresh-check path {
+    animation: none;
+  }
+}
+
+@keyframes pull-refresh-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Hide on mobile / desktop helpers */

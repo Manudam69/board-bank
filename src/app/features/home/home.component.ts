@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
 import { ActiveRoomService } from '../../core/services/active-room.service';
+import { EditionService } from '../../core/services/edition.service';
 import { SoundService } from '../../core/services/sound.service';
 import { ButtonComponent } from '../../shared/components/ui/button.component';
 import { LogoComponent } from '../../shared/components/ui/logo.component';
@@ -38,6 +39,7 @@ import { SocialSectionComponent } from './sections/social-section.component';
 export class HomeComponent {
   private readonly auth = inject(AuthService);
   private readonly activeRoom = inject(ActiveRoomService);
+  private readonly editions = inject(EditionService);
   protected readonly soundService = inject(SoundService);
 
   readonly authReady = this.auth.ready;
@@ -58,6 +60,11 @@ export class HomeComponent {
         this.activeRoom.check();
       }
     });
+  }
+
+  async refreshData(): Promise<void> {
+    if (!this.authReady()) throw new Error('Espera a que termine la conexión.');
+    await Promise.all([this.activeRoom.check(true), this.editions.refresh()]);
   }
 
   protected openCreate(): void {

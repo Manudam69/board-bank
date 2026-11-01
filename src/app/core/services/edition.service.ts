@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -78,5 +79,13 @@ export class EditionService {
     const snap = await getDocs(q);
     const custom = snap.docs.map((d) => d.data() as Edition);
     return [ELECTRONIC_BANKING, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom];
+  }
+
+  async refresh(): Promise<void> {
+    const q = query(collection(this.db, this.customCol), orderBy('name'));
+    const snap = await getDocsFromServer(q);
+    const custom = snap.docs.map((d) => d.data() as Edition);
+    this.editions.set([ELECTRONIC_BANKING, CLASSIC_SPAIN, CLASSIC_USA, MILLIONAIRE, ...custom]);
+    this.loading.set(false);
   }
 }

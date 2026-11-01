@@ -6,6 +6,7 @@ import type { Player, TradeOffer } from '../../../core/models';
 
 const p1 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p1')!;
 const p2 = CLASSIC_SPAIN.properties.find((p) => p.id === 'p2')!;
+const railroad = CLASSIC_SPAIN.properties.find((p) => p.isRailroad)!;
 
 const players: Player[] = [
   { id: 'u1', name: 'Ana', avatarColor: 'bg-red-500', cash: 500, properties: [], bankrupt: false, host: true, joinedAt: 0 },
@@ -67,6 +68,34 @@ describe('TradeListComponent', () => {
     expect(labels).toContain('Rechazar');
     expect(labels).not.toContain('Cancelar');
   });
+
+  for (const status of ['pending', 'accepted', 'rejected', 'cancelled'] as const) {
+    for (const currentPlayerId of ['u1', 'u2']) {
+      it(`shows each property's group color in ${status} offers for ${currentPlayerId}`, () => {
+        const offer = {
+          ...makeOffer(status),
+          toItems: { cash: 25, propertyIds: [railroad.id] },
+        };
+        const fixture = createFixture(currentPlayerId, [offer]);
+        const root: HTMLElement = fixture.nativeElement;
+        const lists = root.querySelectorAll('ul');
+        const expected = currentPlayerId === 'u1' ? [p1, railroad] : [railroad, p1];
+
+        expected.forEach((property, index) => {
+          const row = lists[index].querySelector('app-property-group-bar')?.closest('li');
+          const bar = row?.querySelector<HTMLElement>('span[aria-hidden="true"]');
+          const color = document.createElement('span');
+          color.style.backgroundColor = property.groupColor;
+
+          expect(row?.textContent).toContain(property.name);
+          expect(row?.textContent).toContain(property.group);
+          expect(bar?.style.backgroundColor).toBe(color.style.backgroundColor);
+          expect(bar?.classList.contains('shrink-0')).toBe(true);
+          expect(bar?.classList.contains('ring-1')).toBe(property.id === railroad.id);
+        });
+      });
+    }
+  }
 
   it('renders resolved trades in the history section with correct status badges', () => {
     const fixture = createFixture('u1', [

@@ -5,8 +5,13 @@
         {{ format(items.cash) }}
       </li>
     }
-    @for (name of propertyList(items.propertyIds); track name) {
-      <li class="text-sm text-text">{{ name }}</li>
+    @for (property of propertyList(items.propertyIds); track property.id) {
+      <li class="flex items-center gap-2 text-sm text-text">
+        <app-property-group-bar [groupColor]="property.groupColor" />
+        <span class="min-w-0 break-words">
+          {{ property.name }}<span class="sr-only">, {{ property.group }}</span>
+        </span>
+      </li>
     }
     @if (items.cash <= 0 && items.propertyIds.length === 0) {
       <li class="text-sm text-text-secondary">Nada</li>

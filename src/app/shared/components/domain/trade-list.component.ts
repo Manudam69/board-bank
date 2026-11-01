@@ -1,15 +1,15 @@
 import { Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import type { CurrencyConfig, Edition, Player, TradeOffer } from '../../../core/models';
+import type { CurrencyConfig, Edition, Player, PropertyMetadata, TradeOffer } from '../../../core/models';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { ButtonComponent } from '../ui/button.component';
+import { PropertyGroupBarComponent } from '../ui/property-group-bar.component';
 
 type ResolvedTrade = TradeOffer & { status: 'accepted' | 'rejected' | 'cancelled' };
 
 @Component({
   selector: 'app-trade-list',
-  standalone: true,
-  imports: [DatePipe, NgTemplateOutlet, ButtonComponent],
+  imports: [DatePipe, NgTemplateOutlet, ButtonComponent, PropertyGroupBarComponent],
   templateUrl: './trade-list.component.html',
 })
 export class TradeListComponent {
@@ -57,10 +57,10 @@ export class TradeListComponent {
       .join(', ') || '—';
   }
 
-  protected propertyList(ids: string[]): string[] {
+  protected propertyList(ids: string[]): PropertyMetadata[] {
     return ids
-      .map((id) => this.edition().properties.find((p) => p.id === id)?.name)
-      .filter((name): name is string => !!name);
+      .map((id) => this.edition().properties.find((p) => p.id === id))
+      .filter((property): property is PropertyMetadata => !!property);
   }
 
   /** The offer described from the current player's point of view. */

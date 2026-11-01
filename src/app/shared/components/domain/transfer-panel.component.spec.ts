@@ -1,28 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { TransferPanelComponent } from './transfer-panel.component';
+import { TransferPanelComponent, type TransferAction } from './transfer-panel.component';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { CLASSIC_SPAIN } from '../../../core/constants/editions';
-import type { Player, Room } from '../../../core/models';
-
-function makeRoom(players: Player[]): Room {
-  return {
-    id: 'ROOM',
-    editionId: CLASSIC_SPAIN.id,
-    hostId: players[0]?.id ?? '',
-    status: 'playing',
-    players,
-    log: [],
-    trades: [],
-    createdAt: 0,
-    updatedAt: 0,
-  };
-}
+import type { Player } from '../../../core/models';
 
 const me: Player = {
   id: 'me',
   name: 'Yo',
-  avatarColor: '#ff0000',
+  avatarColor: 'bg-red-500',
   cash: 250_000,
   bankrupt: false,
   host: true,
@@ -30,13 +16,13 @@ const me: Player = {
   properties: [],
 };
 
-function makePlayer(id: string, name: string): Player {
+function makePlayer(id: string, name: string, bankrupt = false): Player {
   return {
     id,
     name,
-    avatarColor: '#000000',
+    avatarColor: 'bg-blue-500',
     cash: 100_000,
-    bankrupt: false,
+    bankrupt,
     host: false,
     joinedAt: 0,
     properties: [],
@@ -50,126 +36,146 @@ describe('TransferPanelComponent', () => {
     });
   });
 
-  function setup() {
+  function setup(players: Player[] = [me, makePlayer('p1', 'Ana'), makePlayer('p2', 'Ben'), makePlayer('p3', 'Cora')]) {
     const fixture = TestBed.createComponent(TransferPanelComponent);
     fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('players', [me, makePlayer('p1', 'Ana'), makePlayer('p2', 'Ben'), makePlayer('p3', 'Cora')]);
+    fixture.componentRef.setInput('players', players);
     fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
     fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
     fixture.detectChanges();
     return fixture;
   }
 
-  it('lists eligible players excluding self and bankrupt players', () => {
-    const fixture = TestBed.createComponent(TransferPanelComponent);
-    const bankrupt = makePlayer('p4', 'Luis');
-    bankrupt.bankrupt = true;
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('players', [me, makePlayer('p1', 'Ana'), makePlayer('p2', 'Ben'), bankrupt]);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.detectChanges();
+  type Fixture = ReturnType<typeof setup>;
 
-    const names = Array.from(fixture.nativeElement.querySelectorAll('[role="group"] button span.truncate')).map(
-      (b) => (b as HTMLElement).textContent?.trim(),
+  function buttons(fixture: Fixture): HTMLButtonElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+  }
+
+  function click(fixture: Fixture, label: string): void {
+    const target = buttons(fixture).find((b) => b.textContent?.includes(label));
+    expect(target, `button "${label}"`).toBeTruthy();
+    target!.click();
+    fixture.detectChanges();
+  }
+
+  function footerButton(fixture: Fixture, label: string): HTMLButtonElement {
+    const target = (Array.from(fixture.nativeElement.querySelectorAll('app-button button')) as HTMLButtonElement[]).find(
+      (b) => b.textContent?.includes(label),
     );
-    expect(names).toContain('Ana');
-    expect(names).toContain('Ben');
-    expect(names).not.toContain('Luis');
+    expect(target, `footer button "${label}"`).toBeTruthy();
+    return target!;
+  }
+
+  function typeAmount(fixture: Fixture, value: string): void {
+    const input = fixture.nativeElement.querySelector('app-amount-input input') as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  it('starts by asking who receives the money and lists the bank plus eligible players', () => {
+    const bankrupt = makePlayer('p4', 'Luis', true);
+    const fixture = setup([me, makePlayer('p1', 'Ana'), makePlayer('p2', 'Ben'), bankrupt]);
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('¿A quién le envías dinero?');
+    expect(text).toContain('Banco');
+    expect(text).toContain('Ana');
+    expect(text).toContain('Ben');
+    expect(text).not.toContain('Luis');
+    expect(text).not.toContain('Yo');
   });
 
-  it('toggles player selection and updates the selected count', () => {
+  it('toggles recipients and shows who is selected', () => {
     const fixture = setup();
-    const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('[role="group"] button'));
-    const anaButton = buttons.find((b) => b.textContent?.includes('Ana'))!;
-    const benButton = buttons.find((b) => b.textContent?.includes('Ben'))!;
+    click(fixture, 'Ana');
+    click(fixture, 'Ben');
 
-    anaButton.click();
-    benButton.click();
-    fixture.detectChanges();
+    const checked = (Array.from(fixture.nativeElement.querySelectorAll('[role="checkbox"]')) as HTMLElement[])
+      .filter((b) => b.getAttribute('aria-checked') === 'true')
+      .map((b) => b.textContent);
+    expect(checked.some((t) => t?.includes('Ana'))).toBe(true);
+    expect(checked.some((t) => t?.includes('Ben'))).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Ana, Ben');
+  });
 
-    expect(anaButton.getAttribute('aria-pressed')).toBe('true');
-    expect(benButton.getAttribute('aria-pressed')).toBe('true');
-    expect(fixture.nativeElement.textContent).toContain('2 jugadores seleccionados');
+  it('keeps the next button disabled until someone is selected', () => {
+    const fixture = setup();
+    expect(footerButton(fixture, 'Siguiente').disabled).toBe(true);
+
+    click(fixture, 'Ana');
+    expect(footerButton(fixture, 'Siguiente').disabled).toBe(false);
   });
 
   it('selects and deselects all players but never selects the bank', () => {
     const fixture = setup();
-    const toggleAll: HTMLButtonElement = fixture.nativeElement.querySelector('button.text-accent')!;
-    const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('[role="group"] button'));
-    const bankButton = buttons.find((b) => b.textContent?.includes('Banco'))!;
+    click(fixture, 'Elegir a todos los jugadores');
 
-    toggleAll.click();
-    fixture.detectChanges();
+    const states = new Map(
+      (Array.from(fixture.nativeElement.querySelectorAll('[role="checkbox"]')) as HTMLElement[]).map((b) => [
+        b.textContent?.trim() ?? '',
+        b.getAttribute('aria-checked'),
+      ]),
+    );
+    const bankState = [...states.entries()].find(([label]) => label.includes('Banco'))?.[1];
+    expect(bankState).toBe('false');
+    expect(fixture.nativeElement.textContent).toContain('Ana, Ben, Cora');
 
-    expect(bankButton.getAttribute('aria-pressed')).toBe('false');
-    expect(fixture.nativeElement.textContent).toContain('3 jugadores seleccionados');
-
-    toggleAll.click();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).not.toContain('jugadores seleccionados');
+    click(fixture, 'Quitar a todos');
+    expect(fixture.nativeElement.textContent).toContain('Elige al menos un destinatario');
   });
 
-  it('disables submit until amount and recipients are valid', () => {
+  it('asks for the amount next and explains per-player amounts when there are several recipients', () => {
     const fixture = setup();
-    const component = fixture.componentInstance as any;
+    click(fixture, 'Ana');
+    click(fixture, 'Ben');
+    click(fixture, 'Siguiente');
 
-    expect(component.canSubmit()).toBe(false);
-
-    component.amount.set(100_000);
-    fixture.detectChanges();
-    expect(component.canSubmit()).toBe(false);
-
-    component.toggleRecipient('p1');
-    fixture.detectChanges();
-    expect(component.canSubmit()).toBe(true);
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('¿Cuánto le das a cada uno?');
+    expect(text).toContain('Monto por jugador');
   });
 
-  it('blocks submit when total exceeds available cash and shows the detailed error', () => {
+  it('blocks review until an amount is typed and flags when the total exceeds the cash', () => {
     const fixture = setup();
-    const component = fixture.componentInstance as any;
-    component.toggleRecipient('p1');
-    component.toggleRecipient('p2');
-    component.toggleRecipient('p3');
-    component.amount.set(100_000);
-    fixture.detectChanges();
+    click(fixture, 'Ana');
+    click(fixture, 'Ben');
+    click(fixture, 'Cora');
+    click(fixture, 'Siguiente');
+    expect(footerButton(fixture, 'Revisar').disabled).toBe(true);
 
-    expect(component.canSubmit()).toBe(false);
-    expect(component.insufficient()).toBe(true);
-
-    const errorText = fixture.nativeElement.textContent;
-    expect(errorText).toContain('Dinero insuficiente');
-    expect(errorText).toContain('Necesitas');
-    expect(errorText).toContain('Tu saldo disponible es');
+    typeAmount(fixture, '100000');
+    expect(footerButton(fixture, 'Revisar').disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('No te alcanza');
   });
 
-  it('emits per-player amount and selected ids on submit', () => {
+  it('shows the total on the confirmation step and emits per-player amount and ids', () => {
     const fixture = setup();
-    const component = fixture.componentInstance as any;
-    let emitted: unknown;
-    component.transferAction.subscribe((action: unknown) => (emitted = action));
+    const emitted: TransferAction[] = [];
+    fixture.componentInstance.transferAction.subscribe((a) => emitted.push(a));
 
-    component.toggleRecipient('p1');
-    component.toggleRecipient('p2');
-    component.amount.set(50_000);
-    component.reason.set('Prueba');
-    fixture.detectChanges();
-    component.submit();
+    click(fixture, 'Ana');
+    click(fixture, 'Ben');
+    click(fixture, 'Siguiente');
+    typeAmount(fixture, '50000');
+    fixture.componentInstance.reason.set('Prueba');
+    click(fixture, 'Revisar');
 
-    expect(emitted).toEqual({ toIds: ['p1', 'p2'], amountPerPlayer: 50_000, reason: 'Prueba' });
+    expect(fixture.nativeElement.textContent).toContain('Confirma la transferencia');
+    expect(footerButton(fixture, 'Transferir').textContent).toContain('100,000');
+
+    footerButton(fixture, 'Transferir').click();
+    expect(emitted).toEqual([{ toIds: ['p1', 'p2'], amountPerPlayer: 50_000, reason: 'Prueba' }]);
+    expect(fixture.nativeElement.textContent).toContain('Confirma la transferencia');
   });
 
-  it('shows the total transfer amount on the confirm button', () => {
+  it('lets the user go back to change the recipients', () => {
     const fixture = setup();
-    const component = fixture.componentInstance as any;
-    component.toggleRecipient('p1');
-    component.toggleRecipient('p2');
-    component.amount.set(50_000);
-    fixture.detectChanges();
+    click(fixture, 'Ana');
+    click(fixture, 'Siguiente');
+    click(fixture, 'Cambiar');
 
-    const button = fixture.nativeElement.querySelector('app-button');
-    expect(button.textContent).toContain('Transferir');
-    expect(button.textContent).toContain('100,000');
+    expect(fixture.nativeElement.textContent).toContain('¿A quién le envías dinero?');
   });
 });

@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { BankPayPanelComponent } from './bank-pay-panel.component';
-import { AmountInputComponent } from '../ui/amount-input.component';
-import { ButtonComponent } from '../ui/button.component';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { CLASSIC_SPAIN } from '../../../core/constants/editions';
 import type { Player } from '../../../core/models';
@@ -21,7 +18,6 @@ describe('BankPayPanelComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [BankPayPanelComponent, AmountInputComponent, ButtonComponent],
       providers: [MoneyFormatService],
     });
 
@@ -34,147 +30,122 @@ describe('BankPayPanelComponent', () => {
     fixture.detectChanges();
   });
 
-  it('lists non-bankrupt players including the actor', () => {
-    const buttons = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="radio"]'),
-    ) as HTMLElement[];
-    const labels = buttons.map((b) => b.textContent?.trim());
-    expect(labels.some((l) => l?.includes('Ana'))).toBe(true);
-    expect(labels.some((l) => l?.includes('Ben'))).toBe(true);
-    expect(labels.some((l) => l?.includes('Cora'))).toBe(false);
+  function text(): string {
+    return fixture.nativeElement.textContent;
+  }
+
+  function click(label: string): void {
+    const target = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLElement[]).find((b) =>
+      b.textContent?.includes(label),
+    );
+    expect(target, `button "${label}"`).toBeTruthy();
+    target!.click();
+    fixture.detectChanges();
+  }
+
+  function footerButton(label: string): HTMLButtonElement {
+    const target = (Array.from(fixture.nativeElement.querySelectorAll('app-button button')) as HTMLButtonElement[]).find(
+      (b) => b.textContent?.includes(label),
+    );
+    expect(target, `footer button "${label}"`).toBeTruthy();
+    return target!;
+  }
+
+  function chips(): HTMLElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('[role="group"] button')) as HTMLElement[];
+  }
+
+  it('host starts by choosing a player and lists non-bankrupt players including the actor', () => {
+    expect(text()).toContain('¿A quién le pagas?');
+    expect(text()).toContain('Ana (tú)');
+    expect(text()).toContain('Ben');
+    expect(text()).not.toContain('Cora');
+  });
+
+  it('moves to the amount step as soon as a player is tapped', () => {
+    click('Ben');
+    expect(fixture.componentInstance['toId']()).toBe('u2');
+    expect(text()).toContain('¿Cuánto recibe Ben?');
   });
 
   it('renders edition-derived amount chips', () => {
-    const chips = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="group"] button'),
-    ) as HTMLElement[];
-    const chipTexts = chips.map((c) => c.textContent?.trim());
-    expect(chipTexts.length).toBeGreaterThan(0);
+    click('Ben');
+    const chipTexts = chips().map((c) => c.textContent?.trim());
     // CLASSIC_SPAIN chips: 200, 200, 100, 50 => unique 200, 100, 50
     expect(chipTexts.some((t) => t?.includes('200'))).toBe(true);
     expect(chipTexts.some((t) => t?.includes('100'))).toBe(true);
     expect(chipTexts.some((t) => t?.includes('50'))).toBe(true);
   });
 
-  it('selects a player', () => {
-    const benButton = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="radio"]'),
-    ).find((b) => (b as HTMLElement).textContent?.includes('Ben')) as HTMLElement;
-    benButton.click();
-    fixture.detectChanges();
-    expect(fixture.componentInstance['toId']()).toBe('u2');
-  });
-
   it('sets amount from a chip and toggles it off', () => {
-    const chip = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="group"] button'),
-    )[0] as HTMLElement;
-    chip.click();
+    click('Ben');
+    chips()[0].click();
     fixture.detectChanges();
     expect(fixture.componentInstance.amount()).toBeGreaterThan(0);
 
-    chip.click();
+    chips()[0].click();
     fixture.detectChanges();
     expect(fixture.componentInstance.amount()).toBe(0);
   });
 
-  it('disables submit until a player and a positive amount are selected', () => {
-    const getDisabled = () =>
-      fixture.debugElement.query(By.css('app-button')).componentInstance.disabled();
+  it('disables review until a positive amount is chosen', () => {
+    click('Ben');
+    expect(footerButton('Revisar').disabled).toBe(true);
 
-    expect(getDisabled()).toBe(true);
-
-    const benButton = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="radio"]'),
-    ).find((b) => (b as HTMLElement).textContent?.includes('Ben')) as HTMLElement;
-    benButton.click();
+    chips()[0].click();
     fixture.detectChanges();
-    expect(getDisabled()).toBe(true);
-
-    const chip = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="group"] button'),
-    )[0] as HTMLElement;
-    chip.click();
-    fixture.detectChanges();
-    expect(getDisabled()).toBe(false);
+    expect(footerButton('Revisar').disabled).toBe(false);
   });
 
-  it('emits payAction and resets form', () => {
+  it('shows a confirmation with the final balance and emits payAction when confirmed', () => {
     const emitted: { toId: string; amount: number; reason: string }[] = [];
     fixture.componentInstance.payAction.subscribe((e) => emitted.push(e));
 
-    const benButton = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="radio"]'),
-    ).find((b) => (b as HTMLElement).textContent?.includes('Ben')) as HTMLElement;
-    benButton.click();
-
-    const chip = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="group"] button'),
-    )[0] as HTMLElement;
-    chip.click();
-
+    click('Ben');
+    chips()[0].click();
     fixture.componentInstance.reason.set('Premio');
     fixture.detectChanges();
+    click('Revisar');
 
-    fixture.componentInstance.submit();
+    expect(text()).toContain('Confirma el pago');
+    expect(text()).toContain('Saldo final de Ben');
+
+    footerButton('Enviar dinero').click();
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].toId).toBe('u2');
     expect(emitted[0].amount).toBeGreaterThan(0);
     expect(emitted[0].reason).toBe('Premio');
-
-    expect(fixture.componentInstance['toId']()).toBeUndefined();
-    expect(fixture.componentInstance.amount()).toBe(0);
+    expect(text()).toContain('Confirma el pago');
   });
 
-  it('for non-host hides player selector and pays only to self', async () => {
+  it('lets the user go back to change the player', () => {
+    click('Ben');
+    click('Cambiar');
+    expect(text()).toContain('¿A quién le pagas?');
+  });
+
+  it('for non-host skips the player step and pays only to self', async () => {
     const players = makePlayers();
     fixture.componentRef.setInput('me', players[1]);
     fixture.componentRef.setInput('isHost', false);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const radios = fixture.nativeElement.querySelectorAll('[role="radio"]');
-    expect(radios.length).toBe(0);
+    expect(text()).toContain('¿Cuánto recibes del Banco?');
+    expect(fixture.nativeElement.querySelectorAll('[role="list"] button').length).toBe(0);
 
-    const destinationText = fixture.nativeElement.textContent;
-    expect(destinationText).toContain('Ben');
-
-    const chip = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="group"] button'),
-    )[0] as HTMLElement;
-    chip.click();
+    chips()[0].click();
     fixture.detectChanges();
-    await fixture.whenStable();
+    click('Revisar');
+    expect(text()).toContain('Confirma el cobro');
 
     const emitted: { toId: string; amount: number; reason: string }[] = [];
-    const sub = fixture.componentInstance.payAction.subscribe((e) => emitted.push(e));
-
-    fixture.componentInstance.submit();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    fixture.componentInstance.payAction.subscribe((e) => emitted.push(e));
+    footerButton('Recibir dinero').click();
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].toId).toBe('u2');
     expect(emitted[0].amount).toBeGreaterThan(0);
-
-    const button = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
-    expect(button.textContent).toContain('Recibir dinero');
-
-    sub.unsubscribe();
-  });
-
-  it('for host shows player selector and pay button labeled Enviar dinero', async () => {
-    const players = makePlayers();
-    fixture.componentRef.setInput('me', players[0]);
-    fixture.componentRef.setInput('isHost', true);
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const radios = fixture.nativeElement.querySelectorAll('[role="radio"]');
-    expect(radios.length).toBeGreaterThan(0);
-
-    const button = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
-    expect(button.textContent).toContain('Enviar dinero');
   });
 });

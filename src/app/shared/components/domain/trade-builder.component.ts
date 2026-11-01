@@ -5,6 +5,7 @@ import { AmountInputComponent } from '../ui/amount-input.component';
 import { ButtonComponent } from '../ui/button.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { PropertyGroupBarComponent } from '../ui/property-group-bar.component';
+import { WizardComponent } from '../ui/wizard.component';
 import { ICONS } from '../../icons';
 
 export type TradeStep = 'player' | 'give' | 'receive' | 'review';
@@ -31,9 +32,28 @@ interface TradePropertyGroup {
 
 const STEPS: readonly TradeStep[] = ['player', 'give', 'receive', 'review'];
 
+function stepLabel(step: TradeStep): string {
+  switch (step) {
+    case 'player':
+      return 'Jugador';
+    case 'give':
+      return 'Tú das';
+    case 'receive':
+      return 'Recibes';
+    case 'review':
+      return 'Enviar';
+  }
+}
+
 @Component({
   selector: 'app-trade-builder',
-  imports: [AmountInputComponent, ButtonComponent, MoneyPipe, NgTemplateOutlet, PropertyGroupBarComponent],
+  imports: [
+    AmountInputComponent,
+    MoneyPipe,
+    NgTemplateOutlet,
+    PropertyGroupBarComponent,
+    WizardComponent,
+  ],
   templateUrl: './trade-builder.component.html',
 })
 export class TradeBuilderComponent {
@@ -47,7 +67,7 @@ export class TradeBuilderComponent {
   protected readonly steps = STEPS;
 
   protected readonly step = signal<TradeStep>('player');
-  protected readonly motion = signal('');
+  protected readonly stepLabels = STEPS.map((s) => stepLabel(s));
   protected readonly toId = signal<string | undefined>(undefined);
   protected readonly fromCash = model(0);
   protected readonly toCash = model(0);
@@ -115,9 +135,6 @@ export class TradeBuilderComponent {
   });
 
   protected goTo(target: TradeStep): void {
-    this.motion.set(
-      STEPS.indexOf(target) >= this.stepIndex() ? 'animate-tab-in-next' : 'animate-tab-in-prev',
-    );
     this.step.set(target);
   }
 
@@ -170,6 +187,20 @@ export class TradeBuilderComponent {
     return player.properties.length;
   }
 
+  protected stepHint(): string {
+    const name = this.partner()?.name ?? '';
+    switch (this.step()) {
+      case 'player':
+        return 'Toca a un jugador y pasamos al siguiente paso.';
+      case 'give':
+        return `Lo que le entregas a ${name}. Si no das dinero o propiedades, déjalo vacío.`;
+      case 'receive':
+        return `Lo que te entrega ${name}. Si no pides nada de algo, déjalo vacío.`;
+      case 'review':
+        return `${name} verá la oferta y podrá aceptarla o rechazarla. No se mueve nada hasta que acepte.`;
+    }
+  }
+
   protected stepTitle(step: TradeStep): string {
     switch (step) {
       case 'player':
@@ -180,19 +211,6 @@ export class TradeBuilderComponent {
         return '¿Qué quieres recibir?';
       case 'review':
         return 'Revisa tu oferta';
-    }
-  }
-
-  protected stepLabel(step: TradeStep): string {
-    switch (step) {
-      case 'player':
-        return 'Jugador';
-      case 'give':
-        return 'Tú das';
-      case 'receive':
-        return 'Recibes';
-      case 'review':
-        return 'Enviar';
     }
   }
 

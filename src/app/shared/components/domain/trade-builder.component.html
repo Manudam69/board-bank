@@ -69,263 +69,200 @@
   </div>
 </ng-template>
 
-<div class="flex flex-col gap-4" [class.pb-4]="step() === 'player'">
-  <nav aria-label="Pasos del intercambio">
-    <ol class="flex items-start gap-1.5">
-      @for (s of steps; track s; let i = $index) {
-        <li class="flex flex-1 flex-col gap-1" [attr.aria-current]="s === step() ? 'step' : null">
-          <span
-            class="h-1 rounded-full transition-colors duration-300"
-            [class.bg-accent]="i <= stepIndex()"
-            [class.bg-border]="i > stepIndex()"
-            aria-hidden="true"
-          ></span>
-          <span
-            class="text-[11px] font-medium"
-            [class.text-text]="i === stepIndex()"
-            [class.text-text-secondary]="i !== stepIndex()"
-          >
-            {{ i + 1 }}. {{ stepLabel(s) }}
-          </span>
-        </li>
-      }
-    </ol>
-  </nav>
-
-  @for (current of [step()]; track current) {
-    <div [class]="motion()" class="flex flex-col gap-4">
-      <div class="space-y-1">
-        <h3 class="text-xl font-semibold text-text" aria-live="polite">{{ stepTitle(current) }}</h3>
-        @switch (current) {
-          @case ('player') {
-            <p class="text-sm text-text-secondary">Toca a un jugador y pasamos al siguiente paso.</p>
-          }
-          @case ('give') {
-            <p class="text-sm text-text-secondary">
-              Lo que le entregas a <strong class="font-semibold text-text">{{ partner()?.name }}</strong>.
-              Si no das dinero o propiedades, déjalo vacío.
-            </p>
-          }
-          @case ('receive') {
-            <p class="text-sm text-text-secondary">
-              Lo que te entrega <strong class="font-semibold text-text">{{ partner()?.name }}</strong>.
-              Si no pides nada de algo, déjalo vacío.
-            </p>
-          }
-          @case ('review') {
-            <p class="text-sm text-text-secondary">
-              <strong class="font-semibold text-text">{{ partner()?.name }}</strong> verá la oferta y podrá
-              aceptarla o rechazarla. No se mueve nada hasta que acepte.
-            </p>
-          }
-        }
-      </div>
-
-      @switch (current) {
-        @case ('player') {
-          <ul class="flex flex-col gap-2" role="list">
-            @for (player of eligibleTo(); track player.id) {
-              <li>
-                <button
-                  type="button"
-                  class="flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus:outline-none"
-                  [class.border-accent]="toId() === player.id"
-                  [class.bg-accent-muted]="toId() === player.id"
-                  [class.border-border]="toId() !== player.id"
-                  [class.bg-surface-elevated]="toId() !== player.id"
-                  (click)="selectTo(player.id)"
-                >
-                  <span
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white {{ player.avatarColor }}"
-                    aria-hidden="true"
-                  >
-                    {{ initials(player.name) }}
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate font-semibold text-text">{{ player.name }}</span>
-                    <span class="block text-xs text-text-secondary">
-                      {{ player.cash | money: currency() }} · {{ propertyCount(player) }}
-                      {{ propertyCount(player) === 1 ? 'propiedad' : 'propiedades' }}
-                    </span>
-                  </span>
-                  <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
-                  </svg>
-                </button>
-              </li>
-            } @empty {
-              <li class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
-                No hay otros jugadores con quién intercambiar.
-              </li>
-            }
-          </ul>
-        }
-
-        @case ('give') {
-          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que das">
-            <app-amount-input
-              [(amount)]="fromCash"
-              [edition]="edition()"
-              [currency]="currency()"
-              label="Dinero que das"
-              [max]="me().cash"
-            />
-            <p class="mt-1 text-xs text-text-secondary">Tienes {{ me().cash | money: currency() }}</p>
-          </section>
-
-          <section class="space-y-3" aria-label="Propiedades que das">
-            <h4 class="text-sm font-semibold text-text">Tus propiedades</h4>
-            <ng-container
-              [ngTemplateOutlet]="picker"
-              [ngTemplateOutletContext]="{
-                groups: myPropertyGroups(),
-                selected: fromProperties(),
-                side: 'give',
-                emptyText: 'No tienes propiedades para ofrecer.'
-              }"
-            />
-          </section>
-        }
-
-        @case ('receive') {
-          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que recibes">
-            <app-amount-input
-              [(amount)]="toCash"
-              [edition]="edition()"
-              [currency]="currency()"
-              label="Dinero que recibes"
-              [max]="partner()?.cash"
-            />
-            <p class="mt-1 text-xs text-text-secondary">
-              {{ partner()?.name }} tiene {{ (partner()?.cash ?? 0) | money: currency() }}
-            </p>
-          </section>
-
-          <section class="space-y-3" aria-label="Propiedades que recibes">
-            <h4 class="text-sm font-semibold text-text">Propiedades de {{ partner()?.name }}</h4>
-            <ng-container
-              [ngTemplateOutlet]="picker"
-              [ngTemplateOutletContext]="{
-                groups: partnerPropertyGroups(),
-                selected: toProperties(),
-                side: 'receive',
-                emptyText: partner()?.name + ' no tiene propiedades.'
-              }"
-            />
-          </section>
-        }
-
-        @case ('review') {
-          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que das">
-            <div class="flex items-center justify-between gap-2">
-              <h4 class="text-sm font-semibold text-negative">Tú das</h4>
-              <button
-                type="button"
-                class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
-                (click)="goTo('give')"
-              >
-                Editar
-              </button>
-            </div>
-            <ul class="mt-1 space-y-2" role="list">
-              @if (fromCash() > 0) {
-                <li class="text-lg font-bold tabular-nums text-text">{{ fromCash() | money: currency() }}</li>
-              }
-              @for (option of fromSelection(); track option.meta.id) {
-                <li class="flex items-center gap-3 text-sm text-text">
-                  <app-property-group-bar [groupColor]="option.meta.groupColor" />
-                  <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
-                </li>
-              }
-              @if (fromCash() <= 0 && fromSelection().length === 0) {
-                <li class="text-sm text-text-secondary">Nada</li>
-              }
-            </ul>
-          </section>
-
-          <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que recibes">
-            <div class="flex items-center justify-between gap-2">
-              <h4 class="text-sm font-semibold text-positive">Tú recibes</h4>
-              <button
-                type="button"
-                class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
-                (click)="goTo('receive')"
-              >
-                Editar
-              </button>
-            </div>
-            <ul class="mt-1 space-y-2" role="list">
-              @if (toCash() > 0) {
-                <li class="text-lg font-bold tabular-nums text-text">{{ toCash() | money: currency() }}</li>
-              }
-              @for (option of toSelection(); track option.meta.id) {
-                <li class="flex items-center gap-3 text-sm text-text">
-                  <app-property-group-bar [groupColor]="option.meta.groupColor" />
-                  <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
-                </li>
-              }
-              @if (toCash() <= 0 && toSelection().length === 0) {
-                <li class="text-sm text-text-secondary">Nada</li>
-              }
-            </ul>
-          </section>
-
-          @if (blocker(); as message) {
-            <p
-              class="rounded-xl border border-negative/30 bg-danger-muted p-3 text-sm text-negative"
-              role="alert"
+<app-wizard
+  [steps]="stepLabels"
+  [index]="stepIndex()"
+  [title]="stepTitle(step())"
+  [hint]="stepHint()"
+  [hideFooter]="step() === 'player'"
+  [hidePrimary]="false"
+  [primaryLabel]="step() === 'review' ? 'Enviar oferta' : step() === 'give' ? 'Siguiente' : 'Revisar oferta'"
+  [primaryDisabled]="step() === 'review' && !canSubmit()"
+  (back)="back()"
+  (next)="step() === 'review' ? submit() : next()"
+>
+  @switch (step()) {
+    @case ('player') {
+      <ul class="flex flex-col gap-2" role="list">
+        @for (player of eligibleTo(); track player.id) {
+          <li>
+            <button
+              type="button"
+              class="flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus:outline-none"
+              [class.border-accent]="toId() === player.id"
+              [class.bg-accent-muted]="toId() === player.id"
+              [class.border-border]="toId() !== player.id"
+              [class.bg-surface-elevated]="toId() !== player.id"
+              (click)="selectTo(player.id)"
             >
-              {{ message }}
-            </p>
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white {{ player.avatarColor }}"
+                aria-hidden="true"
+              >
+                {{ initials(player.name) }}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold text-text">{{ player.name }}</span>
+                <span class="block text-xs text-text-secondary">
+                  {{ player.cash | money: currency() }} · {{ propertyCount(player) }}
+                  {{ propertyCount(player) === 1 ? 'propiedad' : 'propiedades' }}
+                </span>
+              </span>
+              <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+              </svg>
+            </button>
+          </li>
+        } @empty {
+          <li class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+            No hay otros jugadores con quién intercambiar.
+          </li>
+        }
+      </ul>
+    }
+
+    @case ('give') {
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que das">
+        <app-amount-input
+          [(amount)]="fromCash"
+          [edition]="edition()"
+          [currency]="currency()"
+          label="Dinero que das"
+          [max]="me().cash"
+        />
+        <p class="mt-1 text-xs text-text-secondary">Tienes {{ me().cash | money: currency() }}</p>
+      </section>
+
+      <section class="space-y-3" aria-label="Propiedades que das">
+        <h4 class="text-sm font-semibold text-text">Tus propiedades</h4>
+        <ng-container
+          [ngTemplateOutlet]="picker"
+          [ngTemplateOutletContext]="{
+            groups: myPropertyGroups(),
+            selected: fromProperties(),
+            side: 'give',
+            emptyText: 'No tienes propiedades para ofrecer.'
+          }"
+        />
+      </section>
+    }
+
+    @case ('receive') {
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dinero que recibes">
+        <app-amount-input
+          [(amount)]="toCash"
+          [edition]="edition()"
+          [currency]="currency()"
+          label="Dinero que recibes"
+          [max]="partner()?.cash"
+        />
+        <p class="mt-1 text-xs text-text-secondary">
+          {{ partner()?.name }} tiene {{ (partner()?.cash ?? 0) | money: currency() }}
+        </p>
+      </section>
+
+      <section class="space-y-3" aria-label="Propiedades que recibes">
+        <h4 class="text-sm font-semibold text-text">Propiedades de {{ partner()?.name }}</h4>
+        <ng-container
+          [ngTemplateOutlet]="picker"
+          [ngTemplateOutletContext]="{
+            groups: partnerPropertyGroups(),
+            selected: toProperties(),
+            side: 'receive',
+            emptyText: partner()?.name + ' no tiene propiedades.'
+          }"
+        />
+      </section>
+    }
+
+    @case ('review') {
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que das">
+        <div class="flex items-center justify-between gap-2">
+          <h4 class="text-sm font-semibold text-negative">Tú das</h4>
+          <button
+            type="button"
+            class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+            (click)="goTo('give')"
+          >
+            Editar
+          </button>
+        </div>
+        <ul class="mt-1 space-y-2" role="list">
+          @if (fromCash() > 0) {
+            <li class="text-lg font-bold tabular-nums text-text">{{ fromCash() | money: currency() }}</li>
           }
-        }
+          @for (option of fromSelection(); track option.meta.id) {
+            <li class="flex items-center gap-3 text-sm text-text">
+              <app-property-group-bar [groupColor]="option.meta.groupColor" />
+              <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
+            </li>
+          }
+          @if (fromCash() <= 0 && fromSelection().length === 0) {
+            <li class="text-sm text-text-secondary">Nada</li>
+          }
+        </ul>
+      </section>
+
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Lo que recibes">
+        <div class="flex items-center justify-between gap-2">
+          <h4 class="text-sm font-semibold text-positive">Tú recibes</h4>
+          <button
+            type="button"
+            class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+            (click)="goTo('receive')"
+          >
+            Editar
+          </button>
+        </div>
+        <ul class="mt-1 space-y-2" role="list">
+          @if (toCash() > 0) {
+            <li class="text-lg font-bold tabular-nums text-text">{{ toCash() | money: currency() }}</li>
+          }
+          @for (option of toSelection(); track option.meta.id) {
+            <li class="flex items-center gap-3 text-sm text-text">
+              <app-property-group-bar [groupColor]="option.meta.groupColor" />
+              <span class="min-w-0 flex-1 truncate">{{ option.meta.name }}</span>
+            </li>
+          }
+          @if (toCash() <= 0 && toSelection().length === 0) {
+            <li class="text-sm text-text-secondary">Nada</li>
+          }
+        </ul>
+      </section>
+
+      @if (blocker(); as message) {
+        <p
+          class="rounded-xl border border-negative/30 bg-danger-muted p-3 text-sm text-negative"
+          role="alert"
+        >
+          {{ message }}
+        </p>
       }
-    </div>
+    }
   }
 
-  @if (step() !== 'player') {
-    <footer class="sheet-footer">
-      @switch (step()) {
-        @case ('give') {
-          @let given = fromProperties().size;
-          <p class="mb-2 truncate text-xs text-text-secondary">
-            @if (fromCash() <= 0 && given === 0) {
-              Todavía no das nada
-            } @else {
-              Das:
-              @if (fromCash() > 0) { {{ fromCash() | money: currency() }} }
-              @if (fromCash() > 0 && given > 0) { + }
-              @if (given > 0) { {{ given }} {{ given === 1 ? 'propiedad' : 'propiedades' }} }
-            }
-          </p>
-        }
-        @case ('receive') {
-          @let received = toProperties().size;
-          <p class="mb-2 truncate text-xs text-text-secondary">
-            @if (toCash() <= 0 && received === 0) {
-              Todavía no pides nada
-            } @else {
-              Recibes:
-              @if (toCash() > 0) { {{ toCash() | money: currency() }} }
-              @if (toCash() > 0 && received > 0) { + }
-              @if (received > 0) { {{ received }} {{ received === 1 ? 'propiedad' : 'propiedades' }} }
-            }
-          </p>
-        }
+  @if (step() === 'give') {
+    <p wizardSummary class="mb-2 truncate text-xs text-text-secondary">
+      @if (fromCash() <= 0 && fromProperties().size === 0) {
+        Todavía no das nada
+      } @else {
+        Das:
+        @if (fromCash() > 0) { {{ fromCash() | money: currency() }} }
+        @if (fromCash() > 0 && fromProperties().size > 0) { + }
+        @if (fromProperties().size > 0) { {{ fromProperties().size }} {{ fromProperties().size === 1 ? 'propiedad' : 'propiedades' }} }
       }
-
-      <div class="flex gap-2">
-        <app-button variant="secondary" size="lg" (clickAction)="back()">Atrás</app-button>
-        @if (step() === 'review') {
-          <app-button class="min-w-0 flex-1" [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
-            Enviar oferta
-          </app-button>
-        } @else {
-          <app-button class="min-w-0 flex-1" [fullWidth]="true" size="lg" (clickAction)="next()">
-            {{ step() === 'give' ? 'Siguiente' : 'Revisar oferta' }}
-          </app-button>
-        }
-      </div>
-    </footer>
+    </p>
   }
-</div>
+  @if (step() === 'receive') {
+    <p wizardSummary class="mb-2 truncate text-xs text-text-secondary">
+      @if (toCash() <= 0 && toProperties().size === 0) {
+        Todavía no pides nada
+      } @else {
+        Recibes:
+        @if (toCash() > 0) { {{ toCash() | money: currency() }} }
+        @if (toCash() > 0 && toProperties().size > 0) { + }
+        @if (toProperties().size > 0) { {{ toProperties().size }} {{ toProperties().size === 1 ? 'propiedad' : 'propiedades' }} }
+      }
+    </p>
+  }
+</app-wizard>

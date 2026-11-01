@@ -8,13 +8,17 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { ButtonComponent } from '../../components/ui/button.component';
+import { WizardComponent } from '../../components/ui/wizard.component';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { ICONS } from '../../icons';
 import type { CurrencyConfig, Edition, Player } from '../../../core/models';
 import { DebtAssistanceService, type DebtPayment } from '../../../core/services/debt-assistance.service';
 import type { EvaluatedDebtAction } from '../../../core/services/liquidation.service';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
+
+export type DebtStep = 'situation' | 'plan' | 'confirm';
+
+const STEPS: readonly DebtStep[] = ['situation', 'plan', 'confirm'];
 
 interface SellPropertyPlan {
   propertyId: string;
@@ -42,7 +46,7 @@ interface SellGroupPlan {
 
 @Component({
   selector: 'app-debt-assist-dialog',
-  imports: [ButtonComponent, MoneyPipe],
+  imports: [WizardComponent, MoneyPipe],
   templateUrl: './debt-assist-dialog.component.html',
 })
 export class DebtAssistDialogComponent {
@@ -62,6 +66,9 @@ export class DebtAssistDialogComponent {
   readonly closeAction = output<void>();
 
   protected readonly icons = ICONS as Record<string, string>;
+  protected readonly stepLabels = ['Situación', 'Plan', 'Confirmar'];
+  protected readonly step = signal<DebtStep>('situation');
+  protected readonly stepIndex = computed(() => STEPS.indexOf(this.step()));
   protected readonly selectedIds = model<Set<string>>(new Set());
   protected readonly expandedGroups = signal<Set<string>>(new Set());
   private initialized = false;
@@ -165,11 +172,72 @@ export class DebtAssistDialogComponent {
     return p.label;
   });
 
+  protected readonly hasAssets = computed(
+    () => this.hasSellActions() || this.hasMortgageActions() || this.hasBlockedMortgages(),
+  );
+
+  /** Bankruptcy is only offered when there is no way to cover the debt (or when just recovering cash). */
+  protected readonly showBankruptcy = computed(() =>
+    this.isRecoveryOnly() || (!this.canPay() && this.maxRecovery() < this.shortfall()),
+  );
+
+  protected readonly selectedSellProperties = computed(() =>
+    this.sellGroups()
+      .flatMap((group) => group.properties)
+      .filter((property) => property.selectedCount > 0),
+  );
+
+  protected readonly selectedMortgages = computed(() =>
+    this.mortgageActions().filter((action) => action.selected),
+  );
+
+  protected readonly title = computed(() => {
+    switch (this.step()) {
+      case 'situation':
+        if (this.isRecoveryOnly()) return 'Recuperar efectivo';
+        return this.shortfall() > 0 ? `Te faltan ${this.format(this.shortfall())}` : 'Deuda cubierta';
+      case 'plan':
+        return '¿Qué vendes o hipotecas?';
+      case 'confirm':
+        return 'Confirma el plan';
+    }
+  });
+
+  protected readonly hint = computed(() => {
+    switch (this.step()) {
+      case 'situation':
+        return this.contextLabel();
+      case 'plan':
+        return 'Ya te sugerimos un plan. Cámbialo como prefieras.';
+      case 'confirm':
+        return 'Revisa lo que se va a vender o hipotecar.';
+    }
+  });
+
+  protected readonly primaryLabel = computed(() => {
+    switch (this.step()) {
+      case 'situation':
+        return 'Armar mi plan';
+      case 'plan':
+        return 'Revisar plan';
+      case 'confirm':
+        return this.isRecoveryOnly()
+          ? `Liquidar selección (+${this.format(this.selectedRecovery())})`
+          : `Aplicar plan y pagar ${this.format(this.paymentAmount())}`;
+    }
+  });
+
+  protected readonly primaryDisabled = computed(() => {
+    if (this.step() === 'situation') return false;
+    return this.isRecoveryOnly() ? this.selectedRecovery() === 0 : !this.canPay();
+  });
+
   constructor() {
     effect(() => {
       const isOpen = this.open();
       if (isOpen && !this.initialized) {
         this.initialized = true;
+        this.step.set('situation');
         this.suggestPlan();
       }
       if (!isOpen) {
@@ -262,6 +330,24 @@ export class DebtAssistDialogComponent {
       else next.add(id);
       return next;
     });
+  }
+
+  protected goTo(step: DebtStep): void {
+    this.step.set(step);
+  }
+
+  protected back(): void {
+    const previous = STEPS[this.stepIndex() - 1];
+    if (previous) this.step.set(previous);
+  }
+
+  protected advance(): void {
+    if (this.step() === 'confirm') {
+      this.apply();
+      return;
+    }
+    const next = STEPS[this.stepIndex() + 1];
+    if (next) this.step.set(next);
   }
 
   protected apply(): void {

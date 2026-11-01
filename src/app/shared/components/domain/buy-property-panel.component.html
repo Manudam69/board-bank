@@ -1,49 +1,121 @@
-<div class="space-y-4">
-  <div class="rounded-lg border border-border bg-surface-elevated/50 p-3 text-sm">
-    Comprador: <span class="font-semibold text-text">{{ me().name }}</span>
-    <span class="ml-2 text-text-secondary">{{ me().cash | money: currency() }}</span>
-  </div>
-
-  @if (selectedProperty()) {
-    <div class="rounded-lg border border-accent/30 bg-accent-muted p-3 text-sm">
-      <span class="text-text-secondary">Propiedad seleccionada:</span>
-      <span class="ml-1 font-semibold text-text">{{ selectedProperty()?.name }}</span>
-      <span class="ml-2 font-medium text-text">{{ selectedProperty()!.price | money: currency() }}</span>
-    </div>
-  }
-
-  <div class="space-y-5">
-    @for (group of groupedProperties(); track group.group) {
-      <div>
-        <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{{ group.group }}</h4>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          @for (property of group.properties; track property.id) {
-            <app-property-card
-              [property]="property"
-              [edition]="edition()"
-              [selectable]="true"
-              [selected]="selectedProperty()?.id === property.id"
-              (propertyClick)="onSelect(property)"
-            />
-          }
+<app-wizard
+  [steps]="stepLabels"
+  [index]="stepIndex()"
+  [title]="step() === 'property' ? '¿Qué propiedad compraste?' : 'Confirma la compra'"
+  [hint]="step() === 'property' ? 'Solo aparecen las propiedades que aún no tienen dueño.' : 'Revisa el precio y confirma.'"
+  [hideFooter]="step() === 'property'"
+  [primaryLabel]="primaryLabel()"
+  [primaryDisabled]="!canSubmit()"
+  (back)="back()"
+  (next)="submit()"
+>
+  @switch (step()) {
+    @case ('property') {
+      @if (availableGroups().length > 1) {
+        <div class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" data-no-swipe>
+          <div class="flex gap-2 pb-1" role="group" aria-label="Filtrar por grupo">
+            <button
+              type="button"
+              class="inline-flex min-h-10 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition focus:outline-none"
+              [class.border-accent]="activeGroup() === null"
+              [class.bg-accent-muted]="activeGroup() === null"
+              [class.text-text]="activeGroup() === null"
+              [class.border-border]="activeGroup() !== null"
+              [class.bg-surface-elevated]="activeGroup() !== null"
+              [class.text-text-secondary]="activeGroup() !== null"
+              [attr.aria-pressed]="activeGroup() === null"
+              (click)="selectGroup(null)"
+            >
+              Todas
+            </button>
+            @for (g of availableGroups(); track g.group) {
+              <button
+                type="button"
+                class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium transition focus:outline-none"
+                [class.border-accent]="activeGroup() === g.group"
+                [class.bg-accent-muted]="activeGroup() === g.group"
+                [class.text-text]="activeGroup() === g.group"
+                [class.border-border]="activeGroup() !== g.group"
+                [class.bg-surface-elevated]="activeGroup() !== g.group"
+                [class.text-text-secondary]="activeGroup() !== g.group"
+                [attr.aria-pressed]="activeGroup() === g.group"
+                (click)="selectGroup(g.group)"
+              >
+                <span class="h-2.5 w-2.5 rounded-full ring-1 ring-border" [style.background-color]="g.color" aria-hidden="true"></span>
+                {{ g.group }}
+              </button>
+            }
+          </div>
         </div>
-      </div>
-    } @empty {
-      <p class="text-center text-sm text-text-secondary">Todas las propiedades ya tienen dueño.</p>
-    }
-  </div>
-
-  <footer class="sheet-footer">
-    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
-      @if (selectedProperty(); as p) {
-        @if (me().cash >= p.price) {
-          Comprar {{ p.price | money: currency() }}
-        } @else {
-          Conseguir efectivo y comprar {{ p.price | money: currency() }}
-        }
-      } @else {
-        Selecciona una propiedad
       }
-    </app-button>
-  </footer>
-</div>
+
+      <div class="space-y-5">
+        @for (group of groupedProperties(); track group.group) {
+          <div>
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">{{ group.group }}</h4>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              @for (property of group.properties; track property.id) {
+                <app-property-card
+                  [property]="property"
+                  [edition]="edition()"
+                  [selectable]="true"
+                  [selected]="selectedProperty()?.id === property.id"
+                  (propertyClick)="onSelect(property)"
+                />
+              }
+            </div>
+          </div>
+        } @empty {
+          <p class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+            Todas las propiedades ya tienen dueño.
+          </p>
+        }
+      </div>
+    }
+
+    @case ('confirm') {
+      @if (selectedProperty(); as property) {
+        <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Propiedad">
+          <div class="flex items-center gap-3">
+            <app-property-group-bar [groupColor]="property.groupColor" />
+            <div class="min-w-0 flex-1">
+              <p class="text-xs text-text-secondary">{{ property.group }}</p>
+              <p class="truncate text-base font-semibold text-text">{{ property.name }}</p>
+            </div>
+            <button
+              type="button"
+              class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+              (click)="back()"
+            >
+              Cambiar
+            </button>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Resumen de la compra">
+          <dl class="space-y-2 text-sm">
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-text-secondary">Precio</dt>
+              <dd class="text-lg font-bold tabular-nums text-text">{{ property.price | money: currency() }}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-text-secondary">Tu saldo</dt>
+              <dd class="tabular-nums text-text">{{ me().cash | money: currency() }}</dd>
+            </div>
+            @if (canAfford()) {
+              <div class="flex items-center justify-between gap-3 border-t border-border pt-2">
+                <dt class="text-text-secondary">Te quedarás con</dt>
+                <dd class="font-semibold tabular-nums text-text">{{ remaining() | money: currency() }}</dd>
+              </div>
+            }
+          </dl>
+          @if (!canAfford()) {
+            <p class="mt-3 text-sm font-medium text-negative" role="alert">
+              No te alcanza para esta propiedad. Te ayudaremos a conseguir efectivo.
+            </p>
+          }
+        </section>
+      }
+    }
+  }
+</app-wizard>

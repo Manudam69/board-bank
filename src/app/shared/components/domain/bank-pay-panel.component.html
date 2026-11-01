@@ -1,165 +1,154 @@
-<div class="space-y-5">
-  <div class="flex items-center gap-3">
-    <div class="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-3">
-      <div class="flex items-center gap-2">
-        <span
-          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          style="background-color: #64748b"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['banknote']" />
-          </svg>
-        </span>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-semibold text-text">Banco</p>
-          <p class="text-xs text-text-secondary">Fondos ilimitados</p>
-        </div>
-      </div>
-    </div>
-
-    <svg
-      class="h-5 w-5 shrink-0 text-text-muted"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['arrow-down']" />
-    </svg>
-
-    <div
-      class="flex-1 rounded-xl border p-3"
-      [class.border-border]="recipient()"
-      [class.bg-surface-elevated/50]="recipient()"
-      [class.border-dashed]="!recipient()"
-      [class.border-border]="!recipient()"
-      [class.bg-surface-elevated/30]="!recipient()"
-    >
-      <p class="text-xs font-medium text-text-secondary">Destino</p>
-      <p class="truncate text-sm font-semibold text-text">
-        @if (recipient(); as to) {
-          <span class="inline-flex items-center gap-2">
-            <span
-              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-              [class]="to.avatarColor"
-              aria-hidden="true"
-            >
-              {{ to.name.charAt(0).toUpperCase() }}
-            </span>
-            <span class="truncate">{{ to.name }}</span>
-          </span>
-        } @else {
-          <span class="text-text-muted">Selecciona jugador</span>
-        }
-      </p>
-    </div>
-  </div>
-
-  @if (isHost()) {
-    <div class="space-y-2">
-      <p class="text-sm font-medium text-text-secondary">Jugador</p>
-      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Jugador que recibe">
+<app-wizard
+  [steps]="stepLabels()"
+  [index]="stepIndex()"
+  [title]="title()"
+  [hint]="hint()"
+  [hideFooter]="step() === 'to'"
+  [primaryLabel]="primaryLabel()"
+  [primaryDisabled]="primaryDisabled()"
+  (back)="back()"
+  (next)="advance()"
+>
+  @switch (step()) {
+    @case ('to') {
+      <ul class="flex flex-col gap-2" role="list">
         @for (target of eligibleTo(); track target.id) {
-          <button
-            type="button"
-            role="radio"
-            class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
-            [class.border-accent]="toId() === target.id"
-            [class.bg-accent-muted]="toId() === target.id"
-            [class.text-text]="toId() === target.id"
-            [class.border-border]="toId() !== target.id"
-            [class.bg-surface-elevated]="toId() !== target.id"
-            [class.text-text-secondary]="toId() !== target.id"
-            [class.hover:bg-surface-hover]="toId() !== target.id"
-            [attr.aria-checked]="toId() === target.id"
-            (click)="selectTo(target.id)"
-          >
-            <span
-              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-              [class]="target.avatarColor"
-              aria-hidden="true"
+          <li>
+            <button
+              type="button"
+              class="flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus:outline-none"
+              [class.border-accent]="toId() === target.id"
+              [class.bg-accent-muted]="toId() === target.id"
+              [class.border-border]="toId() !== target.id"
+              [class.bg-surface-elevated]="toId() !== target.id"
+              (click)="selectTo(target.id)"
             >
-              {{ target.name.charAt(0).toUpperCase() }}
-            </span>
-            <span class="truncate max-w-[8rem]">{{ target.name }}</span>
-          </button>
+              <app-player-avatar [name]="target.name" [color]="target.avatarColor" />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold text-text">
+                  {{ target.name }}{{ target.id === me().id ? ' (tú)' : '' }}
+                </span>
+                <span class="block text-xs text-text-secondary">{{ formatter.format(target.cash, currency()) }}</span>
+              </span>
+              <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+              </svg>
+            </button>
+          </li>
         } @empty {
-          <p class="text-sm text-text-muted">No hay jugadores disponibles.</p>
+          <li class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+            No hay jugadores disponibles.
+          </li>
         }
-      </div>
-    </div>
-  }
+      </ul>
+    }
 
-  <app-amount-input
-    [(amount)]="amount"
-    [edition]="edition()"
-    [currency]="currency()"
-    label="Cantidad"
-  />
-
-  @if (amountChips().length > 0) {
-    <div class="space-y-1.5">
-      <p class="text-sm font-medium text-text-secondary">Atajos de la edición</p>
-      <div class="flex flex-wrap gap-2" role="group" aria-label="Cantidades rápidas">
-        @for (value of amountChips(); track value) {
+    @case ('amount') {
+      @if (isHost() && recipient(); as to) {
+        <section class="flex items-center gap-3 rounded-2xl border border-border bg-surface-elevated/40 p-3" aria-label="Jugador">
+          <app-player-avatar [name]="to.name" [color]="to.avatarColor" size="sm" />
+          <p class="min-w-0 flex-1 truncate text-sm text-text">
+            <span class="text-text-secondary">Para: </span><span class="font-semibold">{{ to.name }}</span>
+          </p>
           <button
             type="button"
-            class="rounded-lg border px-3 py-1.5 text-sm font-medium transition"
-            [class.border-accent]="amount() === value"
-            [class.bg-accent-muted]="amount() === value"
-            [class.text-text]="amount() === value"
-            [class.border-border]="amount() !== value"
-            [class.bg-surface-elevated]="amount() !== value"
-            [class.text-text-secondary]="amount() !== value"
-            [class.hover:bg-surface-hover]="amount() !== value"
-            [attr.aria-pressed]="amount() === value"
-            (click)="toggleAmountChip(value)"
+            class="-mr-1 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+            (click)="goTo('to')"
           >
-            {{ formatter.format(value, currency()) }}
+            Cambiar
           </button>
-        }
-      </div>
-    </div>
-  }
-
-  @if (amount() > 0 && recipient(); as to) {
-    <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm">
-      <p class="text-text-secondary">
-        {{ to.name }} recibe
-        <span class="font-semibold text-text">{{ formatter.format(amount(), currency()) }}</span>
-      </p>
-      <p class="mt-1 text-text-secondary">
-        Saldo final:
-        <span class="font-semibold text-text">{{ formatter.format(finalBalance(), currency()) }}</span>
-      </p>
-    </div>
-  } @else if (amount() > 0) {
-    <div class="rounded-xl border border-border bg-surface-elevated/30 p-3 text-sm text-text-secondary">
-      Total a pagar:
-      <span class="font-semibold text-text">{{ formatter.format(amount(), currency()) }}</span>
-    </div>
-  }
-
-  <div class="space-y-1">
-    <label class="block text-sm font-medium text-text-secondary" for="bank-pay-reason">Motivo (opcional)</label>
-    <input
-      id="bank-pay-reason"
-      type="text"
-      class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
-      placeholder="Ej. premio de tarjeta, bono, corrección..."
-      [value]="reason()"
-      (input)="onReasonInput($any($event).target.value)"
-    />
-  </div>
-
-  <footer class="sheet-footer">
-    <app-button [fullWidth]="true" size="lg" [disabled]="!canSubmit()" (clickAction)="submit()">
-      @if (isHost()) {
-        Enviar dinero
-      } @else {
-        Recibir dinero
+        </section>
       }
-    </app-button>
-  </footer>
-</div>
+
+      @if (amountChips().length > 0) {
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-text-secondary">Atajos de la edición</p>
+          <div class="flex flex-wrap gap-2" role="group" aria-label="Cantidades rápidas">
+            @for (value of amountChips(); track value) {
+              <button
+                type="button"
+                class="min-h-11 rounded-xl border px-4 text-sm font-medium transition focus:outline-none"
+                [class.border-accent]="amount() === value"
+                [class.bg-accent-muted]="amount() === value"
+                [class.text-text]="amount() === value"
+                [class.border-border]="amount() !== value"
+                [class.bg-surface-elevated]="amount() !== value"
+                [class.text-text-secondary]="amount() !== value"
+                [attr.aria-pressed]="amount() === value"
+                (click)="toggleAmountChip(value)"
+              >
+                {{ formatter.format(value, currency()) }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <app-amount-input
+        [(amount)]="amount"
+        [edition]="edition()"
+        [currency]="currency()"
+        label="Cantidad"
+      />
+
+      <div class="space-y-1">
+        <label class="block text-sm font-medium text-text-secondary" for="bank-pay-reason">Motivo (opcional)</label>
+        <input
+          id="bank-pay-reason"
+          type="text"
+          class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text placeholder:text-text-muted focus:border-accent focus:outline-none"
+          placeholder="Ej. premio de tarjeta, bono, corrección..."
+          [value]="reason()"
+          (input)="onReasonInput($any($event).target.value)"
+        />
+      </div>
+    }
+
+    @case ('confirm') {
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4 text-center" aria-label="Total">
+        <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          {{ isHost() ? 'El Banco envía' : 'Recibes del Banco' }}
+        </p>
+        <p class="mt-1 text-4xl font-bold tabular-nums text-positive">{{ formatter.format(amount(), currency()) }}</p>
+        @if (recipient(); as to) {
+          <p class="mt-2 text-sm text-text-secondary">
+            Saldo final de {{ to.id === me().id ? 'tu cuenta' : to.name }}:
+            <span class="font-semibold text-text">{{ formatter.format(finalBalance(), currency()) }}</span>
+          </p>
+        }
+      </section>
+
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Detalle">
+        @if (recipient(); as to) {
+          <div class="flex items-center gap-3">
+            <app-player-avatar [name]="to.name" [color]="to.avatarColor" size="sm" />
+            <p class="min-w-0 flex-1 truncate text-sm text-text-secondary">
+              Para <span class="font-semibold text-text">{{ to.name }}</span>
+            </p>
+            @if (isHost()) {
+              <button
+                type="button"
+                class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+                (click)="goTo('to')"
+              >
+                Cambiar
+              </button>
+            }
+          </div>
+        }
+        <div class="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+          <p class="min-w-0 truncate text-sm text-text-secondary">
+            Motivo: <span class="text-text">{{ reason() || 'Pago del Banco' }}</span>
+          </p>
+          <button
+            type="button"
+            class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+            (click)="goTo('amount')"
+          >
+            Editar
+          </button>
+        </div>
+      </section>
+    }
+  }
+</app-wizard>

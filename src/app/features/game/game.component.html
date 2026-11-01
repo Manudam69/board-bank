@@ -289,13 +289,15 @@
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    <app-transfer-panel
-      [me]="currentPlayer()!"
-      [players]="room()!.players"
-      [currency]="edition()!.currency"
-      [edition]="edition()!"
-      (transferAction)="onTransfer($event)"
-    />
+    @for (session of [actionSession()]; track session) {
+      <app-transfer-panel
+        [me]="currentPlayer()!"
+        [players]="room()!.players"
+        [currency]="edition()!.currency"
+        [edition]="edition()!"
+        (transferAction)="onTransfer($event)"
+      />
+    }
   }
 </app-modal>
 
@@ -307,13 +309,15 @@
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    <app-buy-property-panel
-      [edition]="edition()!"
-      [me]="currentPlayer()!"
-      [players]="room()!.players"
-      [currency]="edition()!.currency"
-      (buyAction)="onBuy($event)"
-    />
+    @for (session of [actionSession()]; track session) {
+      <app-buy-property-panel
+        [edition]="edition()!"
+        [me]="currentPlayer()!"
+        [players]="room()!.players"
+        [currency]="edition()!.currency"
+        (buyAction)="onBuy($event)"
+      />
+    }
   }
 </app-modal>
 
@@ -324,15 +328,17 @@
   [flushBottom]="true"
   (closeAction)="closeAction()"
 >
-  @if (room() && edition() && currentPlayer() && activeAction() === 'rent') {
-    <app-rent-panel
-      [room]="room()!"
-      [me]="currentPlayer()!"
-      [edition]="edition()!"
-      [currency]="edition()!.currency"
-      [initialToId]="rentContextPlayerId()"
-      (rentAction)="onRent($event)"
-    />
+  @if (room() && edition() && currentPlayer()) {
+    @for (session of [actionSession()]; track session) {
+      <app-rent-panel
+        [room]="room()!"
+        [me]="currentPlayer()!"
+        [edition]="edition()!"
+        [currency]="edition()!.currency"
+        [initialToId]="rentContextPlayerId()"
+        (rentAction)="onRent($event)"
+      />
+    }
   }
 </app-modal>
 
@@ -344,14 +350,16 @@
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    <app-bank-pay-panel
-      [players]="room()!.players"
-      [currency]="edition()!.currency"
-      [edition]="edition()!"
-      [me]="currentPlayer()!"
-      [isHost]="isHost()"
-      (payAction)="onBankPay($event)"
-    />
+    @for (session of [actionSession()]; track session) {
+      <app-bank-pay-panel
+        [players]="room()!.players"
+        [currency]="edition()!.currency"
+        [edition]="edition()!"
+        [me]="currentPlayer()!"
+        [isHost]="isHost()"
+        (payAction)="onBankPay($event)"
+      />
+    }
   }
 </app-modal>
 
@@ -398,7 +406,7 @@
   (closeAction)="closeAction()"
 >
   @if (room() && edition() && currentPlayer()) {
-    @for (session of [tradeSession()]; track session) {
+    @for (session of [actionSession()]; track session) {
       <app-trade-builder
         [edition]="edition()!"
         [me]="currentPlayer()!"

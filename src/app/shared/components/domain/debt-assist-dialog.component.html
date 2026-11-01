@@ -1,11 +1,17 @@
-<div class="flex min-h-full flex-1 flex-col gap-5">
-  <!-- Header -->
-  <div class="space-y-1">
-    <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">{{ contextLabel() }}</p>
-    <h2 class="text-xl font-semibold text-text">Plan para conseguir dinero</h2>
-    <p class="text-sm text-text-secondary">Elige una combinación de ventas o hipotecas para cubrir la deuda.</p>
-  </div>
-
+<app-wizard
+  [steps]="stepLabels"
+  [index]="stepIndex()"
+  [title]="title()"
+  [hint]="hint()"
+  [busy]="busy()"
+  [hidePrimary]="step() === 'situation' && !hasAssets()"
+  [primaryLabel]="primaryLabel()"
+  [primaryDisabled]="primaryDisabled()"
+  (back)="back()"
+  (next)="advance()"
+>
+  @switch (step()) {
+    @case ('situation') {
   <!-- Resumen del déficit -->
   <div class="rounded-2xl border border-border bg-surface p-4">
     <div class="grid grid-cols-2 gap-4 text-sm">
@@ -39,6 +45,30 @@
     </div>
   </div>
 
+  @if (hasAssets()) {
+    <p class="text-sm text-text-secondary">
+      Puedes vender edificios o hipotecar propiedades. Ya armamos un plan sugerido: lo ves en el siguiente paso y lo puedes cambiar.
+    </p>
+  } @else {
+    <div class="rounded-2xl border border-border bg-surface-elevated/50 p-6 text-center">
+      <p class="text-sm font-medium text-text">No tienes activos que puedas liquidar</p>
+      <p class="mt-1 text-xs text-text-secondary">No hay edificios ni propiedades hipotecables disponibles.</p>
+    </div>
+  }
+
+  @if (showBankruptcy()) {
+    <button
+      type="button"
+      class="flex min-h-12 w-full items-center justify-center rounded-xl border border-negative/40 px-4 text-sm font-semibold text-negative transition hover:bg-danger-muted focus:outline-none disabled:opacity-50"
+      [disabled]="busy()"
+      (click)="requestBankruptcy()"
+    >
+      {{ isRecoveryOnly() && maxRecovery() > 0 ? 'Declarar bancarrota igualmente' : 'Declarar bancarrota' }}
+    </button>
+  }
+    }
+
+    @case ('confirm') {
   <!-- Plan sugerido / Totales en vivo -->
   <div
     class="rounded-2xl border p-4"
@@ -86,6 +116,40 @@
     }
   </div>
 
+  <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Qué haces en este plan">
+    <div class="flex items-center justify-between gap-2">
+      <h4 class="text-sm font-semibold text-text">Qué haces en este plan</h4>
+      <button
+        type="button"
+        class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+        (click)="goTo('plan')"
+      >
+        Editar
+      </button>
+    </div>
+    <ul class="mt-1 space-y-2" role="list">
+      @for (property of selectedSellProperties(); track property.propertyId) {
+        <li class="flex items-center justify-between gap-3 text-sm">
+          <span class="min-w-0 truncate text-text">
+            Vender {{ property.selectedCount }} {{ property.selectedCount === 1 ? 'edificio' : 'edificios' }} · {{ property.propertyName }}
+          </span>
+          <span class="shrink-0 font-semibold text-positive">+{{ property.selectedRecovery | money: currency() }}</span>
+        </li>
+      }
+      @for (action of selectedMortgages(); track action.id) {
+        <li class="flex items-center justify-between gap-3 text-sm">
+          <span class="min-w-0 truncate text-text">Hipotecar · {{ action.propertyName }}</span>
+          <span class="shrink-0 font-semibold text-positive">+{{ action.amount | money: currency() }}</span>
+        </li>
+      }
+      @if (selectedSellProperties().length === 0 && selectedMortgages().length === 0) {
+        <li class="text-sm text-text-secondary">No hay acciones seleccionadas.</li>
+      }
+    </ul>
+  </section>
+    }
+
+    @case ('plan') {
   <!-- Sección Vender edificios -->
   @if (hasSellActions()) {
     <div class="space-y-2">
@@ -228,101 +292,24 @@
     </div>
   }
 
-  <!-- Sin activos -->
-  @if (!hasSellActions() && !hasMortgageActions() && !hasBlockedMortgages()) {
-    <div class="rounded-2xl border border-border bg-surface-elevated/50 p-6 text-center">
-      <p class="text-sm font-medium text-text">No tienes activos que puedas liquidar</p>
-      <p class="mt-1 text-xs text-text-secondary">No hay edificios ni propiedades hipotecables disponibles.</p>
-    </div>
+    }
   }
 
-  <!-- Spacer / footer -->
-  <div class="h-2 flex-1 sm:h-0"></div>
-
-  <footer class="sheet-footer">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      @if (!isRecoveryOnly()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          size="lg"
-          [loading]="busy()"
-          [disabled]="busy() || !canPay()"
-          (clickAction)="apply()"
-        >
-          @if (canPay()) {
-            Aplicar plan y pagar {{ paymentAmount() | money: currency() }}
-          } @else {
-            Faltan {{ remainingShortfall() | money: currency() }}
-          }
-        </app-button>
-      }
-
+  @if (step() === 'plan') {
+    <p
+      wizardSummary
+      class="mb-2 text-sm font-medium"
+      [class.text-positive]="isRecoveryOnly() ? selectedRecovery() > 0 : canPay()"
+      [class.text-text-secondary]="isRecoveryOnly() ? selectedRecovery() === 0 : !canPay()"
+      aria-live="polite"
+    >
       @if (isRecoveryOnly()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          size="lg"
-          [loading]="busy()"
-          [disabled]="busy() || selectedRecovery() === 0"
-          (clickAction)="apply()"
-        >
-          Liquidar selección (+{{ selectedRecovery() | money: currency() }})
-        </app-button>
+        Recuperas +{{ selectedRecovery() | money: currency() }}
+      } @else if (canPay()) {
+        ✓ Cubres la deuda · Te quedan {{ remainingCash() | money: currency() }}
+      } @else {
+        Juntas +{{ selectedRecovery() | money: currency() }} · Aún faltan {{ remainingShortfall() | money: currency() }}
       }
-
-      @if (!canPay() && maxRecovery() < shortfall()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          size="lg"
-          variant="danger"
-          [disabled]="busy()"
-          (clickAction)="requestBankruptcy()"
-        >
-          Declarar bancarrota
-        </app-button>
-      }
-
-      @if (isRecoveryOnly()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          [variant]="maxRecovery() > 0 ? 'ghost' : 'danger'"
-          [disabled]="busy()"
-          (clickAction)="requestBankruptcy()"
-        >
-          @if (maxRecovery() > 0) {
-            Declarar bancarrota igualmente
-          } @else {
-            Declarar bancarrota
-          }
-        </app-button>
-      }
-
-      @if (!isRecoveryOnly() && maxRecovery() >= shortfall()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          variant="ghost"
-          [disabled]="busy()"
-          (clickAction)="close()"
-        >
-          Cancelar pago
-        </app-button>
-      }
-
-      @if (isRecoveryOnly()) {
-        <app-button
-          class="block"
-          [fullWidth]="true"
-          variant="ghost"
-          [disabled]="busy()"
-          (clickAction)="close()"
-        >
-          Volver
-        </app-button>
-      }
-    </div>
-  </footer>
-</div>
+    </p>
+  }
+</app-wizard>

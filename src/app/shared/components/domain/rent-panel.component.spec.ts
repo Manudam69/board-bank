@@ -20,16 +20,26 @@ function makeRoom(players: Player[]): Room {
   };
 }
 
-const me: Player = {
-  id: 'me',
-  name: 'Yo',
-  avatarColor: '#ff0000',
-  cash: 200,
-  bankrupt: false,
-  host: true,
-  joinedAt: 0,
-  properties: [],
-};
+function makePlayer(id: string, name: string, propertyIds: string[], extra: Partial<Player> = {}): Player {
+  return {
+    id,
+    name,
+    avatarColor: 'bg-green-500',
+    cash: 1000,
+    bankrupt: false,
+    host: false,
+    joinedAt: 0,
+    properties: propertyIds.map((propertyId) => ({
+      propertyId,
+      houses: 0,
+      hasHotel: false,
+      mortgaged: false,
+    })),
+    ...extra,
+  };
+}
+
+const me = makePlayer('me', 'Yo', [], { cash: 200, host: true });
 
 describe('RentPanelComponent', () => {
   beforeEach(() => {
@@ -38,291 +48,166 @@ describe('RentPanelComponent', () => {
     });
   });
 
-  it('lists receivers with un-mortgaged properties only', () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const brokeOwner: Player = {
-      id: 'broke',
-      name: 'Luis',
-      avatarColor: '#0000ff',
+  function create(
+    players: Player[],
+    options: { me?: Player; initialToId?: string } = {},
+  ) {
+    const self = options.me ?? me;
+    const fixture = TestBed.createComponent(RentPanelComponent);
+    fixture.componentRef.setInput('room', makeRoom([self, ...players]));
+    fixture.componentRef.setInput('me', self);
+    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
+    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
+    if (options.initialToId) fixture.componentRef.setInput('initialToId', options.initialToId);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function text(fixture: ReturnType<typeof create>): string {
+    return fixture.nativeElement.textContent;
+  }
+
+  function click(fixture: ReturnType<typeof create>, label: string): void {
+    const target = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLElement[]).find(
+      (b) => b.textContent?.includes(label),
+    );
+    expect(target, `button "${label}"`).toBeTruthy();
+    target!.click();
+    fixture.detectChanges();
+  }
+
+  it('asks for the receiver first and lists only owners with un-mortgaged properties', () => {
+    const ana = makePlayer('owner', 'Ana', ['p1']);
+    const luis = makePlayer('broke', 'Luis', [], {
       cash: 0,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
       properties: [{ propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: true }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, owner, brokeOwner]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
+    });
+    const fixture = create([ana, makePlayer('ben', 'Ben', ['p2']), luis]);
 
-    const receiverNames = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="radio"]'),
-    ).map((b) => (b as HTMLElement).textContent?.trim());
-    expect(receiverNames.some((n) => n?.includes('Ana'))).toBe(true);
-    expect(receiverNames.some((n) => n?.includes('Luis'))).toBe(false);
+    expect(text(fixture)).toContain('¿A quién le pagas?');
+    expect(text(fixture)).toContain('Ana');
+    expect(text(fixture)).toContain('Ben');
+    expect(text(fixture)).not.toContain('Luis');
   });
 
-  it('auto-selects the only receiver', () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [
-        { propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false },
-        { propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: false },
-      ],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, owner]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
+  it('skips the receiver step when there is only one owner', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p1', 'p2'])]);
 
-    expect(fixture.nativeElement.textContent).toContain('Ana');
-    const cobradorText = fixture.nativeElement.textContent;
-    expect(cobradorText).toContain('Ana');
-    expect(fixture.nativeElement.textContent).toContain('2 disponibles');
+    expect(text(fixture)).toContain('¿En qué propiedad caíste?');
+    expect(text(fixture)).toContain('Ana');
   });
 
-  it('calculates and displays rent for selected property', async () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, owner]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
-    await fixture.whenStable();
+  it('moves to the property step as soon as a receiver is tapped', () => {
+    const fixture = create([makePlayer('a', 'Ana', ['p1']), makePlayer('b', 'Ben', ['p2'])]);
 
-    const propertyButtons = fixture.nativeElement.querySelectorAll('app-property-card button, button[aria-label]');
-    const target = Array.from(propertyButtons).find((b) =>
-      (b as HTMLElement).textContent?.includes('Ronda'),
-    ) as HTMLElement | undefined;
-    expect(target).toBeTruthy();
-
-    const panelText = fixture.nativeElement.textContent;
-    expect(panelText).toContain('Renta');
-    expect(panelText).toContain('€2');
-    expect(panelText).not.toContain('€60');
-
-    target!.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Renta a pagar');
-    expect(fixture.nativeElement.textContent).toContain('€2');
+    click(fixture, 'Ben');
+    expect(text(fixture)).toContain('¿En qué propiedad caíste?');
+    expect(text(fixture)).toContain('Ben');
   });
 
-  it('requires dice input for utilities', async () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p27', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, owner]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
-    await fixture.whenStable();
+  it('shows the calculated rent on each property and moves to confirmation on tap', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p1'])]);
 
-    const panelText = fixture.nativeElement.textContent;
-    expect(panelText).toContain('× dados');
+    expect(text(fixture)).toContain('Renta');
+    expect(text(fixture)).toContain('€2');
 
-    const propertyButtons = fixture.nativeElement.querySelectorAll('app-property-card button, button[aria-label]');
-    const target = Array.from(propertyButtons).find((b) =>
-      (b as HTMLElement).textContent?.includes('Electricidad'),
-    ) as HTMLElement | undefined;
-    target!.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const diceInput = fixture.nativeElement.querySelector('input#dice') as HTMLInputElement;
-    expect(diceInput).toBeTruthy();
-    expect(diceInput.value).toBe('7');
+    click(fixture, 'Ronda');
+    expect(text(fixture)).toContain('Confirma el pago');
+    expect(text(fixture)).toContain('Renta a pagar');
+    expect(text(fixture)).toContain('€2');
+    expect(text(fixture)).toContain('Te quedarás con');
   });
 
-  it('emits rent action with toId, propertyId and amount', async () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
+  it('requires dice input for utilities and starts at 7', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p27'])]);
+    expect(text(fixture)).toContain('× dados');
+
+    click(fixture, 'Electricidad');
+    const dice = fixture.nativeElement.querySelector('input#dice') as HTMLInputElement;
+    expect(dice).toBeTruthy();
+    expect(dice.value).toBe('7');
+  });
+
+  it('changes the dice total with the plus and minus buttons', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p27'])]);
+    click(fixture, 'Electricidad');
+
+    (fixture.nativeElement.querySelector('button[aria-label="Sumar uno"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect((fixture.nativeElement.querySelector('input#dice') as HTMLInputElement).value).toBe('8');
+
+    (fixture.nativeElement.querySelector('button[aria-label="Restar uno"]') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('button[aria-label="Restar uno"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect((fixture.nativeElement.querySelector('input#dice') as HTMLInputElement).value).toBe('6');
+  });
+
+  it('emits rent action with toId, propertyId and amount', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p1'])]);
     const emitted: Array<{ toId: string; propertyId: string; amount: number }> = [];
     fixture.componentInstance.rentAction.subscribe((e) => emitted.push(e));
-    fixture.componentRef.setInput('room', makeRoom([me, owner]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
-    await fixture.whenStable();
 
-    const propertyButtons = fixture.nativeElement.querySelectorAll('app-property-card button, button[aria-label]');
-    const target = Array.from(propertyButtons).find((b) =>
-      (b as HTMLElement).textContent?.includes('Ronda'),
-    ) as HTMLElement;
-    target.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    click(fixture, 'Ronda');
+    click(fixture, 'Pagar €2');
 
-    const payButton = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
-    expect(payButton).toBeTruthy();
-    payButton.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(emitted.length).toBe(1);
-    expect(emitted[0]).toEqual({ toId: 'owner', propertyId: 'p1', amount: 2 });
+    expect(emitted).toEqual([{ toId: 'owner', propertyId: 'p1', amount: 2 }]);
   });
 
-  it('disables submit when cash is insufficient', async () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [
-        { propertyId: 'p22', houses: 0, hasHotel: false, mortgaged: false },
-      ],
-    };
+  it('stays on the confirmation step after paying so the sheet does not change while closing', () => {
+    const fixture = create([makePlayer('owner', 'Ana', ['p1'])]);
+    click(fixture, 'Ronda');
+    click(fixture, 'Pagar €2');
+
+    expect(text(fixture)).toContain('Confirma el pago');
+  });
+
+  it('offers to raise cash when the payment exceeds the player\'s money', () => {
     const poorMe: Player = { ...me, cash: 20 };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([poorMe, owner]));
-    fixture.componentRef.setInput('me', poorMe);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.detectChanges();
-    await fixture.whenStable();
+    const fixture = create([makePlayer('owner', 'Ana', ['p22'])], { me: poorMe });
 
-    const propertyButtons = fixture.nativeElement.querySelectorAll('app-property-card button, button[aria-label]');
-    const target = Array.from(propertyButtons).find((b) =>
-      (b as HTMLElement).textContent?.includes('Barcelona'),
-    ) as HTMLElement;
-    target.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const payButton = fixture.nativeElement.querySelector('app-button button') as HTMLButtonElement;
-    expect(payButton.disabled).toBe(false);
-    expect(payButton.textContent?.trim()).toContain('Conseguir efectivo');
+    click(fixture, 'Barcelona');
+    const labels = (Array.from(fixture.nativeElement.querySelectorAll('app-button button')) as HTMLButtonElement[]).map(
+      (b) => b.textContent?.trim(),
+    );
+    expect(labels.some((l) => l?.includes('Conseguir efectivo'))).toBe(true);
+    expect(text(fixture)).toContain('Fondos insuficientes');
+    const primary = (Array.from(fixture.nativeElement.querySelectorAll('app-button button')) as HTMLButtonElement[]).find(
+      (b) => b.textContent?.includes('Conseguir efectivo'),
+    )!;
+    expect(primary.disabled).toBe(false);
   });
 
-  it('pre-selects initialToId when it is a valid receiver', async () => {
-    const ana: Player = {
-      id: 'owner-ana',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const ben: Player = {
-      id: 'owner-ben',
-      name: 'Ben',
-      avatarColor: '#0000ff',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, ana, ben]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.componentRef.setInput('initialToId', 'owner-ben');
-    fixture.detectChanges();
-    await fixture.whenStable();
+  it('lets the user go back to change the property or the receiver', () => {
+    const fixture = create([makePlayer('a', 'Ana', ['p1']), makePlayer('b', 'Ben', ['p2'])]);
+    click(fixture, 'Ana');
+    click(fixture, 'Ronda');
+    expect(text(fixture)).toContain('Confirma el pago');
 
-    const selectedButton = fixture.nativeElement.querySelector('[role="radio"][aria-checked="true"]') as HTMLElement | null;
-    expect(selectedButton?.textContent).toContain('Ben');
-    expect(fixture.nativeElement.textContent).toContain('1 disponibles');
+    click(fixture, 'Atrás');
+    expect(text(fixture)).toContain('¿En qué propiedad caíste?');
+    click(fixture, 'Atrás');
+    expect(text(fixture)).toContain('¿A quién le pagas?');
   });
 
-  it('falls back to no preselection when initialToId is not a valid receiver', async () => {
-    const owner: Player = {
-      id: 'owner',
-      name: 'Ana',
-      avatarColor: '#00ff00',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p1', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const secondOwner: Player = {
-      id: 'owner-2',
-      name: 'Ben',
-      avatarColor: '#ff0000',
-      cash: 1000,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
-      properties: [{ propertyId: 'p2', houses: 0, hasHotel: false, mortgaged: false }],
-    };
-    const broke: Player = {
-      id: 'broke',
-      name: 'Luis',
-      avatarColor: '#0000ff',
+  it('starts on the property step when initialToId is a valid receiver', () => {
+    const fixture = create([makePlayer('owner-ana', 'Ana', ['p1']), makePlayer('owner-ben', 'Ben', ['p2'])], {
+      initialToId: 'owner-ben',
+    });
+
+    expect(text(fixture)).toContain('¿En qué propiedad caíste?');
+    expect(text(fixture)).toContain('Ben');
+  });
+
+  it('falls back to the receiver step when initialToId is not a valid receiver', () => {
+    const broke = makePlayer('broke', 'Luis', [], {
       cash: 0,
-      bankrupt: false,
-      host: false,
-      joinedAt: 0,
       properties: [{ propertyId: 'p3', houses: 0, hasHotel: false, mortgaged: true }],
-    };
-    const fixture = TestBed.createComponent(RentPanelComponent);
-    fixture.componentRef.setInput('room', makeRoom([me, owner, secondOwner, broke]));
-    fixture.componentRef.setInput('me', me);
-    fixture.componentRef.setInput('edition', CLASSIC_SPAIN);
-    fixture.componentRef.setInput('currency', CLASSIC_SPAIN.currency);
-    fixture.componentRef.setInput('initialToId', 'broke');
-    fixture.detectChanges();
-    await fixture.whenStable();
+    });
+    const fixture = create(
+      [makePlayer('owner', 'Ana', ['p1']), makePlayer('owner-2', 'Ben', ['p2']), broke],
+      { initialToId: 'broke' },
+    );
 
-    const selectedButton = fixture.nativeElement.querySelector('[role="radio"][aria-checked="true"]') as HTMLElement | null;
-    expect(selectedButton).toBeNull();
+    expect(text(fixture)).toContain('¿A quién le pagas?');
   });
 });

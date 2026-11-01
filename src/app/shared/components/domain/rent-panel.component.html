@@ -1,82 +1,53 @@
-<div class="flex min-h-full flex-1 flex-col gap-5">
-  <div class="flex items-center gap-3">
-    <div class="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-3">
-      <div class="flex items-center gap-2">
-        <span
-          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          [style.background-color]="me().avatarColor"
-        >
-          {{ me().name.charAt(0).toUpperCase() }}
-        </span>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-semibold text-text">{{ me().name }}</p>
-          <p class="text-xs text-text-secondary">Pagas</p>
-        </div>
-      </div>
-    </div>
-
-    <svg
-      class="h-5 w-5 shrink-0 text-text-muted"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['arrow-right']" />
-    </svg>
-
-    <div class="flex-1 rounded-xl border border-dashed border-border bg-surface-elevated/30 p-3">
-      <p class="text-xs font-medium text-text-secondary">Cobrador</p>
-      <p class="truncate text-sm font-semibold text-text">
-        @if (selectedToId(); as toId) {
-          {{ receivers().find((r) => r.id === toId)?.name ?? 'Jugador' }}
-        } @else {
-          <span class="text-text-muted">Selecciona jugador</span>
+<app-wizard
+  [steps]="stepLabels"
+  [index]="stepIndex()"
+  [title]="title()"
+  [hint]="hint()"
+  [hideFooter]="step() === 'receiver'"
+  [hidePrimary]="step() === 'property'"
+  [canGoBack]="step() === 'confirm' || canChangeReceiver()"
+  [primaryLabel]="primaryLabel()"
+  [primaryDisabled]="submitDisabled()"
+  (back)="back()"
+  (next)="submit()"
+>
+  @switch (step()) {
+    @case ('receiver') {
+      <ul class="flex flex-col gap-2" role="list">
+        @for (receiver of receivers(); track receiver.id) {
+          <li>
+            <button
+              type="button"
+              class="flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus:outline-none"
+              [class.border-accent]="selectedToId() === receiver.id"
+              [class.bg-accent-muted]="selectedToId() === receiver.id"
+              [class.border-border]="selectedToId() !== receiver.id"
+              [class.bg-surface-elevated]="selectedToId() !== receiver.id"
+              (click)="selectTo(receiver.id)"
+            >
+              <app-player-avatar [name]="receiver.name" [color]="receiver.avatarColor" />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold text-text">{{ receiver.name }}</span>
+                <span class="block text-xs text-text-secondary">
+                  {{ receiver.propertyIds.length }}
+                  {{ receiver.propertyIds.length === 1 ? 'propiedad disponible' : 'propiedades disponibles' }}
+                </span>
+              </span>
+              <svg class="h-5 w-5 shrink-0 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons['chevronRight']" />
+              </svg>
+            </button>
+          </li>
+        } @empty {
+          <li class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
+            Nadie tiene propiedades libres de hipoteca a las que pagar renta.
+          </li>
         }
-      </p>
-    </div>
-  </div>
+      </ul>
+    }
 
-  <div class="space-y-2">
-    <p class="text-sm font-medium text-text-secondary">¿A quién le pagas?</p>
-    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Cobrador de la renta">
-      @for (receiver of receivers(); track receiver.id) {
-        <button
-          type="button"
-          role="radio"
-          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none"
-          [class.border-accent]="selectedToId() === receiver.id"
-          [class.bg-accent-muted]="selectedToId() === receiver.id"
-          [class.text-text]="selectedToId() === receiver.id"
-          [class.border-border]="selectedToId() !== receiver.id"
-          [class.bg-surface-elevated]="selectedToId() !== receiver.id"
-          [class.text-text-secondary]="selectedToId() !== receiver.id"
-          [class.hover:bg-surface-hover]="selectedToId() !== receiver.id"
-          [attr.aria-checked]="selectedToId() === receiver.id"
-          (click)="selectTo(receiver.id)"
-        >
-          <span
-            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
-            [style.background-color]="receiver.avatarColor"
-          >
-            {{ receiver.name.charAt(0).toUpperCase() }}
-          </span>
-          <span class="max-w-[8rem] truncate">{{ receiver.name }}</span>
-        </button>
-      } @empty {
-        <p class="text-sm text-text-secondary">No hay jugadores con propiedades disponibles.</p>
-      }
-    </div>
-  </div>
-
-  @if (selectedToId()) {
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <p class="text-sm font-medium text-text-secondary">Propiedad</p>
-        <span class="text-xs text-text-muted">{{ receiverProperties().length }} disponibles</span>
-      </div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    @case ('property') {
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         @for (item of receiverProperties(); track item.property.id) {
           <app-property-card
             [property]="item.property"
@@ -89,87 +60,113 @@
             (propertyClick)="onSelectProperty(item.property)"
           />
         } @empty {
-          <p class="col-span-full text-sm text-text-secondary">
+          <p class="col-span-full rounded-xl border border-dashed border-border p-4 text-center text-sm text-text-secondary">
             Este jugador no tiene propiedades libres de hipoteca.
           </p>
         }
       </div>
-    </div>
-  }
-
-  @if (needsDice()) {
-    <div class="space-y-1">
-      <label class="block text-sm font-medium text-text-secondary" for="dice">Suma de dados</label>
-      <input
-        id="dice"
-        type="number"
-        min="2"
-        max="12"
-        class="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2.5 text-text focus:border-accent focus:outline-none"
-        [value]="diceSum() ?? ''"
-        (input)="onDiceInput($any($event).target.valueAsNumber)"
-      />
-      <p class="text-xs text-text-muted">Servicios: se multiplica por el resultado de los dados.</p>
-    </div>
-  }
-
-  <!-- Spacer that pushes the footer to the modal bottom while keeping visible pre-footer whitespace -->
-  <div class="h-2 flex-1 sm:h-0"></div>
-
-  <footer class="sheet-footer">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div class="min-w-0">
-        <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Renta a pagar</p>
-        @if (rentInfo(); as info) {
-          <p class="mt-0.5 truncate text-xs text-text-secondary">
-            {{ info.reason }}
-            @if (selectedOwnerName()) {
-              <span class="text-text-secondary"> · {{ selectedOwnerName() }}</span>
-            }
-          </p>
-        } @else {
-          <p class="mt-0.5 text-xs text-text-secondary">Selecciona una propiedad para continuar.</p>
-        }
-      </div>
-
-      <div class="shrink-0">
-        @for (info of rentInfoList(); track info.amount) {
-          <app-money-display
-            class="animate-pop-in"
-            [amount]="info.amount"
-            [currency]="currency()"
-            size="lg"
-          />
-        } @empty {
-          <span class="block text-2xl font-bold tabular-nums leading-none text-text-muted">—</span>
-        }
-      </div>
-    </div>
-
-    @if (rentInfo(); as info) {
-      @if (!canPay() && info.amount > 0) {
-        <p class="mt-3 text-xs font-medium text-negative">
-          Fondos insuficientes (tienes {{ me().cash | money: currency() }})
-        </p>
-      }
     }
 
-    <app-button
-      class="mt-4 block"
-      [fullWidth]="true"
-      size="lg"
-      [disabled]="!selectedToId() || !selectedProperty() || !isValidDice()"
-      (clickAction)="submit()"
-    >
-      @if (rentInfo(); as info) {
-        @if (canPay()) {
-          Pagar {{ info.amount | money: currency() }}
-        } @else {
-          Conseguir efectivo y pagar {{ info.amount | money: currency() }}
-        }
-      } @else {
-        Pagar renta
+    @case ('confirm') {
+      <section class="space-y-3 rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Detalle del pago">
+        <div class="flex items-center gap-3">
+          @if (selectedReceiver(); as receiver) {
+            <app-player-avatar [name]="receiver.name" [color]="receiver.avatarColor" size="sm" />
+            <p class="min-w-0 flex-1 text-sm text-text-secondary">
+              Pagas a <span class="font-semibold text-text">{{ receiver.name }}</span>
+            </p>
+          }
+          @if (canChangeReceiver()) {
+            <button
+              type="button"
+              class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+              (click)="goTo('receiver')"
+            >
+              Cambiar
+            </button>
+          }
+        </div>
+        <div class="flex items-center gap-3 border-t border-border pt-3">
+          @if (selectedProperty(); as property) {
+            <app-property-group-bar [groupColor]="property.groupColor" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-semibold text-text">{{ property.name }}</p>
+              @if (rentInfo(); as info) {
+                <p class="truncate text-xs text-text-secondary">{{ info.reason }}</p>
+              }
+            </div>
+          }
+          <button
+            type="button"
+            class="-mr-2 flex min-h-11 items-center px-2 text-sm font-medium text-accent-focus focus:outline-none"
+            (click)="goTo('property')"
+          >
+            Cambiar
+          </button>
+        </div>
+      </section>
+
+      @if (needsDice()) {
+        <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4" aria-label="Dados">
+          <label class="block text-sm font-medium text-text" for="dice">¿Cuánto sacaste en los dados?</label>
+          <p class="mt-0.5 text-xs text-text-secondary">Servicios: la renta se multiplica por el resultado.</p>
+          <div class="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-elevated text-xl font-semibold text-text focus:outline-none disabled:opacity-40"
+              aria-label="Restar uno"
+              [disabled]="(diceSum() ?? 7) <= minDice"
+              (click)="bumpDice(-1)"
+            >
+              −
+            </button>
+            <input
+              id="dice"
+              type="number"
+              inputmode="numeric"
+              [min]="minDice"
+              [max]="maxDice"
+              class="h-12 min-w-0 flex-1 rounded-xl border border-border bg-surface-elevated px-3 text-center text-2xl font-bold tabular-nums text-text focus:border-accent focus:outline-none"
+              [value]="diceSum() ?? ''"
+              (input)="onDiceInput($any($event).target.valueAsNumber)"
+            />
+            <button
+              type="button"
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-elevated text-xl font-semibold text-text focus:outline-none disabled:opacity-40"
+              aria-label="Sumar uno"
+              [disabled]="(diceSum() ?? 7) >= maxDice"
+              (click)="bumpDice(1)"
+            >
+              +
+            </button>
+          </div>
+          @if (!isValidDice()) {
+            <p class="mt-2 text-xs font-medium text-negative" role="alert">Escribe un número entre {{ minDice }} y {{ maxDice }}.</p>
+          }
+        </section>
       }
-    </app-button>
-  </footer>
-</div>
+
+      <section class="rounded-2xl border border-border bg-surface-elevated/40 p-4 text-center" aria-label="Total">
+        <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Renta a pagar</p>
+        <div class="mt-1 flex justify-center">
+          @for (info of rentInfoList(); track info.amount) {
+            <app-money-display class="animate-pop-in" [amount]="info.amount" [currency]="currency()" size="xl" />
+          } @empty {
+            <span class="block text-4xl font-bold tabular-nums leading-none text-text-muted">—</span>
+          }
+        </div>
+        @if (rentInfo(); as info) {
+          @if (canPay()) {
+            <p class="mt-2 text-sm text-text-secondary">
+              Te quedarás con <span class="font-semibold text-text">{{ remaining() | money: currency() }}</span>
+            </p>
+          } @else if (info.amount > 0) {
+            <p class="mt-2 text-sm font-medium text-negative" role="alert">
+              Fondos insuficientes (tienes {{ me().cash | money: currency() }}). Te ayudaremos a conseguir efectivo.
+            </p>
+          }
+        }
+      </section>
+    }
+  }
+</app-wizard>

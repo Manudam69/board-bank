@@ -1,13 +1,21 @@
-import { Component, computed, inject, input, model, output, type OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, model, output, signal, type OnInit } from '@angular/core';
 import type { CurrencyConfig, Edition, Player, PlayerProperty, PropertyMetadata, Room } from '../../../core/models';
-import { ICONS } from '../../icons';
 import { PropertyCardComponent } from './property-card.component';
-import { ButtonComponent } from '../ui/button.component';
 import { MoneyDisplayComponent } from './money-display.component';
 import { MoneyFormatService } from '../../../core/services/money-format.service';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { RentService } from '../../../core/services/rent.service';
+import { PlayerAvatarComponent } from '../ui/player-avatar.component';
+import { PropertyGroupBarComponent } from '../ui/property-group-bar.component';
+import { WizardComponent } from '../ui/wizard.component';
+import { ICONS } from '../../icons';
+
+export type RentStep = 'receiver' | 'property' | 'confirm';
+
+const STEPS: readonly RentStep[] = ['receiver', 'property', 'confirm'];
+const MIN_DICE = 2;
+const MAX_DICE = 12;
+const DEFAULT_DICE = 7;
 
 interface Receiver {
   id: string;
@@ -25,7 +33,14 @@ interface ReceiverProperty {
 
 @Component({
   selector: 'app-rent-panel',
-  imports: [FormsModule, PropertyCardComponent, ButtonComponent, MoneyDisplayComponent, MoneyPipe],
+  imports: [
+    PropertyCardComponent,
+    MoneyDisplayComponent,
+    MoneyPipe,
+    PlayerAvatarComponent,
+    PropertyGroupBarComponent,
+    WizardComponent,
+  ],
   templateUrl: './rent-panel.component.html',
 })
 export class RentPanelComponent implements OnInit {
@@ -39,11 +54,19 @@ export class RentPanelComponent implements OnInit {
   readonly rentAction = output<{ toId: string; propertyId: string; amount: number }>();
   readonly initialToId = input<string | undefined>(undefined);
 
+  protected readonly icons = ICONS as Record<string, string>;
+  protected readonly stepLabels = ['Cobrador', 'Propiedad', 'Pagar'];
+  protected readonly minDice = MIN_DICE;
+  protected readonly maxDice = MAX_DICE;
+
+  protected readonly step = signal<RentStep>('receiver');
   protected selectedToId = model<string | undefined>(undefined);
   protected selectedProperty = model<PropertyMetadata | undefined>(undefined);
   protected diceSum = model<number | undefined>(undefined);
 
-  protected receivers = computed(() => {
+  protected readonly stepIndex = computed(() => STEPS.indexOf(this.step()));
+
+  protected receivers = computed<Receiver[]>(() => {
     const me = this.me();
     return this.room().players
       .filter((p) => p.id !== me.id && !p.bankrupt && p.properties.length > 0)
@@ -61,6 +84,12 @@ export class RentPanelComponent implements OnInit {
       .filter((r) => r.propertyIds.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
   });
+
+  protected readonly canChangeReceiver = computed(() => this.receivers().length > 1);
+
+  protected readonly selectedReceiver = computed(() =>
+    this.receivers().find((r) => r.id === this.selectedToId()),
+  );
 
   protected receiverProperties = computed(() => {
     const toId = this.selectedToId();
@@ -91,7 +120,7 @@ export class RentPanelComponent implements OnInit {
 
   protected resolvedDice = computed(() => {
     if (!this.needsDice()) return undefined;
-    return this.diceSum() ?? 7;
+    return this.diceSum() ?? DEFAULT_DICE;
   });
 
   protected rentInfo = computed(() => {
@@ -116,22 +145,46 @@ export class RentPanelComponent implements OnInit {
     return !!this.selectedToId() && !!this.selectedProperty() && this.me().cash >= amount && amount > 0;
   });
 
+  protected remaining = computed(() => this.me().cash - (this.rentInfo()?.amount ?? 0));
+
   protected isValidDice = computed(() => {
     if (!this.needsDice()) return true;
     const dice = this.diceSum();
-    return dice !== undefined && dice >= 2 && dice <= 12;
+    return dice !== undefined && dice >= MIN_DICE && dice <= MAX_DICE;
   });
 
-  protected selectedOwnerName = computed(() => {
-    const property = this.selectedProperty();
-    if (!property) return '';
-    const owner = this.room().players.find((p) =>
-      p.properties.some((pp) => pp.propertyId === property.id),
-    );
-    return owner?.name ?? '';
+  protected readonly submitDisabled = computed(
+    () => !this.selectedToId() || !this.selectedProperty() || !this.isValidDice(),
+  );
+
+  protected readonly title = computed(() => {
+    switch (this.step()) {
+      case 'receiver':
+        return '¿A quién le pagas?';
+      case 'property':
+        return '¿En qué propiedad caíste?';
+      case 'confirm':
+        return 'Confirma el pago';
+    }
   });
 
-  protected readonly icons = ICONS;
+  protected readonly hint = computed(() => {
+    switch (this.step()) {
+      case 'receiver':
+        return 'Toca al jugador dueño de la propiedad.';
+      case 'property':
+        return `Elige la propiedad de ${this.selectedReceiver()?.name ?? 'este jugador'}. La renta ya está calculada.`;
+      case 'confirm':
+        return 'Revisa el monto y confirma.';
+    }
+  });
+
+  protected readonly primaryLabel = computed(() => {
+    const info = this.rentInfo();
+    if (!info) return 'Pagar renta';
+    const amount = this.formatter.format(info.amount, this.currency());
+    return this.canPay() ? `Pagar ${amount}` : `Conseguir efectivo y pagar ${amount}`;
+  });
 
   ngOnInit(): void {
     const list = this.receivers();
@@ -143,25 +196,40 @@ export class RentPanelComponent implements OnInit {
     } else if (list.length === 1) {
       this.selectedToId.set(list[0].id);
     }
+    if (this.selectedToId()) this.step.set('property');
+  }
+
+  protected goTo(step: RentStep): void {
+    this.step.set(step);
+  }
+
+  protected back(): void {
+    const previous = STEPS[this.stepIndex() - 1];
+    if (previous) this.step.set(previous);
   }
 
   protected selectTo(toId: string): void {
+    if (this.selectedToId() !== toId) {
+      this.selectedProperty.set(undefined);
+      this.diceSum.set(undefined);
+    }
     this.selectedToId.set(toId);
-    this.selectedProperty.set(undefined);
-    this.diceSum.set(undefined);
+    this.step.set('property');
   }
 
   protected onSelectProperty(property: PropertyMetadata): void {
     this.selectedProperty.set(property);
-    if (property.isUtility) {
-      this.diceSum.set(7);
-    } else {
-      this.diceSum.set(undefined);
-    }
+    this.diceSum.set(property.isUtility ? DEFAULT_DICE : undefined);
+    this.step.set('confirm');
   }
 
   protected onDiceInput(value: number | null): void {
     this.diceSum.set(value ?? undefined);
+  }
+
+  protected bumpDice(delta: number): void {
+    const current = this.diceSum() ?? DEFAULT_DICE;
+    this.diceSum.set(Math.min(MAX_DICE, Math.max(MIN_DICE, current + delta)));
   }
 
   protected submit(): void {
@@ -170,17 +238,6 @@ export class RentPanelComponent implements OnInit {
     const amount = this.rentInfo()?.amount ?? 0;
     if (toId && property && amount > 0) {
       this.rentAction.emit({ toId, propertyId: property.id, amount });
-      this.reset();
-    }
-  }
-
-  protected reset(): void {
-    this.selectedToId.set(undefined);
-    this.selectedProperty.set(undefined);
-    this.diceSum.set(undefined);
-    const list = this.receivers();
-    if (list.length === 1) {
-      this.selectedToId.set(list[0].id);
     }
   }
 }

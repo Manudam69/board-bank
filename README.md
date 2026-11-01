@@ -29,6 +29,14 @@ Necesitas Node.js y npm. Para usar la aplicación con Firebase:
 
 La aplicación necesita autenticación anónima y permisos de lectura y escritura en Firestore. Si aparece «Missing or insufficient permissions», comprueba que has publicado las reglas y habilitado la autenticación anónima.
 
+## Instalación como PWA
+
+BoardBank se puede instalar desde su sitio HTTPS: en Chrome/Android, abre el menú y elige **Instalar aplicación**; en Safari/iPhone, usa **Compartir → Añadir a pantalla de inicio**. Se abre en modo independiente, con icono propio y soporte para las áreas seguras del dispositivo.
+
+La compilación de producción incluye el service worker de Angular. Después de una primera visita con conexión, guarda la interfaz y los recursos locales para poder abrirlos sin red. Firebase, el refresco de datos y las operaciones de la partida requieren conexión; instalar la app no habilita partidas sin conexión. Las actualizaciones se descargan en segundo plano y se usan en una nueva apertura, sin forzar una recarga durante la partida.
+
+Para comprobar la PWA localmente, ejecuta `npm run build` y sirve `dist/board-bank/browser` con un servidor estático en `localhost` que redirija las rutas de la aplicación a `index.html`. El service worker está desactivado en desarrollo (`npm start`). El despliegue en GitHub Pages usa la ruta base que devuelve `actions/configure-pages` para que la instalación y las rutas funcionen también en subdirectorios.
+
 ## Desarrollo
 
 Instala las dependencias e inicia el servidor local:

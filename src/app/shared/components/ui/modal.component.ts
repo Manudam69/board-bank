@@ -137,6 +137,14 @@ export class ModalComponent implements OnDestroy {
     }
     if (!this.rendered()) return;
 
+    if (this.dragDismissed) {
+      this.rendered.set(false);
+      this.closing.set(false);
+      this.dragY.set(0);
+      this.frozenHeight.set(null);
+      return;
+    }
+
     this.frozenHeight.set(this.lastHeight || null);
     this.closing.set(true);
     this.exitTimer = setTimeout(() => {
@@ -223,6 +231,7 @@ export class ModalComponent implements OnDestroy {
 
     const shouldDismiss =
       !cancelled &&
+      this.closeable() &&
       (distance > Math.min(DISMISS_DISTANCE_PX, this.panelHeight * DISMISS_RATIO) ||
         (velocity > DISMISS_VELOCITY_PX_PER_MS && distance > DISMISS_VELOCITY_MIN_PX));
 

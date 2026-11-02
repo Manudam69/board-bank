@@ -99,7 +99,7 @@ describe('ModalComponent exit animation', () => {
     dispatch(cancelled ? 'pointercancel' : 'pointerup', endY);
   }
 
-  it('dismisses by touch once and reopens with one click during the exit animation', () => {
+  it.each([0, 16, 100, 230])('reopens with one click %i ms after a touch dismissal', (delay) => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
     const fixture = TestBed.createComponent(ModalHostComponent);
     fixture.detectChanges();
@@ -113,13 +113,8 @@ describe('ModalComponent exit animation', () => {
 
     expect(fixture.componentInstance.open()).toBe(false);
     expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(1);
-    const exiting = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
-    expect(exiting.style.pointerEvents).toBe('none');
-    expect(exiting.hasAttribute('inert')).toBe(true);
-
-    // A trailing backdrop click must not request another close while exiting.
-    exiting.click();
-    expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+    vi.advanceTimersByTime(delay);
 
     fixture.nativeElement.querySelector('button').click();
     fixture.detectChanges();
@@ -131,9 +126,13 @@ describe('ModalComponent exit animation', () => {
     expect(reopened.hasAttribute('data-closing')).toBe(false);
     expect(reopened.hasAttribute('inert')).toBe(false);
     expect(reopened.style.pointerEvents).toBe('');
-    expect(panel.style.translate).toBe('');
+    const newHeader = reopened.querySelector('.touch-none') as HTMLElement;
+    const newPanel = newHeader.parentElement!;
+    expect(newPanel).not.toBe(panel);
+    expect(newPanel.style.translate).toBe('');
+    vi.spyOn(newPanel, 'offsetHeight', 'get').mockReturnValue(400);
 
-    drag(header, 160);
+    drag(newHeader, 160);
     fixture.detectChanges();
     expect(fixture.componentInstance.open()).toBe(false);
     expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(2);

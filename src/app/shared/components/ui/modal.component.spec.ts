@@ -1,6 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { Component, signal } from '@angular/core';
 import { ModalComponent } from './modal.component';
+
+@Component({
+  imports: [ModalComponent],
+  template: `
+    <button type="button" (click)="open.set(true)">Abrir</button>
+    <app-modal [open]="open()" title="Prueba" (closeAction)="onClose()">
+      Contenido
+    </app-modal>
+  `,
+})
+class ModalHostComponent {
+  readonly open = signal(true);
+  readonly closed = vi.fn(() => this.open.set(false));
+
+  onClose(): void {
+    this.closed();
+  }
+}
 
 describe('ModalComponent exit animation', () => {
   beforeEach(() => {
@@ -9,6 +28,7 @@ describe('ModalComponent exit animation', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     document.body.classList.remove('overflow-hidden');
   });
 
@@ -61,5 +81,80 @@ describe('ModalComponent exit animation', () => {
     const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
     expect(dialog.hasAttribute('data-closing')).toBe(false);
+  });
+
+  function drag(header: HTMLElement, endY: number, cancelled = false): void {
+    function dispatch(type: string, clientY: number): void {
+      header.dispatchEvent(
+        Object.assign(new Event(type, { bubbles: true }), {
+          pointerId: 1,
+          pointerType: 'touch',
+          clientY,
+        }),
+      );
+    }
+
+    dispatch('pointerdown', 0);
+    dispatch('pointermove', endY);
+    dispatch(cancelled ? 'pointercancel' : 'pointerup', endY);
+  }
+
+  it('dismisses by touch once and reopens with one click during the exit animation', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
+    const fixture = TestBed.createComponent(ModalHostComponent);
+    fixture.detectChanges();
+
+    const header = fixture.nativeElement.querySelector('.touch-none') as HTMLElement;
+    const panel = header.parentElement!;
+    vi.spyOn(panel, 'offsetHeight', 'get').mockReturnValue(400);
+
+    drag(header, 160);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.open()).toBe(false);
+    expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(1);
+    const exiting = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(exiting.style.pointerEvents).toBe('none');
+    expect(exiting.hasAttribute('inert')).toBe(true);
+
+    // A trailing backdrop click must not request another close while exiting.
+    exiting.click();
+    expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(1);
+
+    fixture.nativeElement.querySelector('button').click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+
+    const reopened = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(fixture.componentInstance.open()).toBe(true);
+    expect(reopened.hasAttribute('data-closing')).toBe(false);
+    expect(reopened.hasAttribute('inert')).toBe(false);
+    expect(reopened.style.pointerEvents).toBe('');
+    expect(panel.style.translate).toBe('');
+
+    drag(header, 160);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.open()).toBe(false);
+    expect(fixture.componentInstance.closed).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the modal open and resets its position after a short or cancelled gesture', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
+    const fixture = TestBed.createComponent(ModalHostComponent);
+    fixture.detectChanges();
+    const header = fixture.nativeElement.querySelector('.touch-none') as HTMLElement;
+    const panel = header.parentElement!;
+    vi.spyOn(panel, 'offsetHeight', 'get').mockReturnValue(400);
+
+    drag(header, 20);
+    fixture.detectChanges();
+    expect(panel.style.translate).toBe('');
+
+    drag(header, 160, true);
+    fixture.detectChanges();
+    expect(panel.style.translate).toBe('');
+    expect(fixture.componentInstance.open()).toBe(true);
+    expect(fixture.componentInstance.closed).not.toHaveBeenCalled();
   });
 });

@@ -125,6 +125,8 @@ export class ModalComponent implements OnDestroy {
 
   private syncVisibility(isOpen: boolean): void {
     clearTimeout(this.exitTimer);
+    this.dragPointerId = null;
+    this.dragging.set(false);
     if (isOpen) {
       this.rendered.set(true);
       this.closing.set(false);
@@ -171,7 +173,7 @@ export class ModalComponent implements OnDestroy {
   }
 
   protected close(): void {
-    if (this.closeable()) {
+    if (this.open() && !this.closing() && this.closeable()) {
       this.lastHeight = this.panel()?.nativeElement.offsetHeight || this.lastHeight;
       this.closeAction.emit();
     }

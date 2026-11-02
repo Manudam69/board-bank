@@ -3,6 +3,8 @@
     [class]="backdropClasses()"
     [style.background-color]="backdropColor()"
     [style.transition]="backdropTransition()"
+    [style.pointer-events]="closing() ? 'none' : null"
+    [attr.inert]="closing() ? '' : null"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="title()"

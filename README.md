@@ -16,6 +16,8 @@ BoardBank es una banca digital compartida para llevar las cuentas de una partida
 
 El indicador de actualización acompaña el gesto con movimiento suave, vuelve a su posición al soltar y transforma la flecha en una palomita verde al terminar correctamente. Se desvanece en 160 ms tras la confirmación breve. Con movimiento reducido, evita los desplazamientos animados y muestra la palomita sin animar su trazo.
 
+En móvil, los modales pueden cerrarse deslizando su cabecera hacia abajo. El gesto cancela el movimiento táctil nativo para que el navegador no descarte el siguiente toque: los botones quedan disponibles inmediatamente después de soltar.
+
 BoardBank no tira los dados, mueve fichas ni detecta automáticamente el paso por casillas o la bancarrota: los jugadores registran esas operaciones manualmente. La app sirve como banca y libro de cuentas, no como sustituto del tablero.
 
 ## Configuración

@@ -25,6 +25,7 @@
         class="shrink-0 touch-none px-4 pt-3 pb-2 sm:touch-auto sm:px-6 sm:pt-6 sm:pb-4"
         (pointerdown)="onDragStart($event)"
         (pointermove)="onDragMove($event)"
+        (touchmove)="onDragTouchMove($event)"
         (pointerup)="onDragEnd($event)"
         (pointercancel)="onDragEnd($event, true)"
       >

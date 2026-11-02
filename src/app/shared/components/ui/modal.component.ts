@@ -218,6 +218,13 @@ export class ModalComponent implements OnDestroy {
     if (this.dragSamples.length > 4) this.dragSamples.shift();
   }
 
+  protected onDragTouchMove(event: TouchEvent): void {
+    if (this.dragging() && event.cancelable) {
+      // Otherwise the browser can suppress the next tap's click after this custom drag.
+      event.preventDefault();
+    }
+  }
+
   protected onDragEnd(event: PointerEvent, cancelled = false): void {
     if (event.pointerId !== this.dragPointerId) return;
     this.dragPointerId = null;

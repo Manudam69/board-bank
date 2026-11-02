@@ -99,6 +99,34 @@ describe('ModalComponent exit animation', () => {
     dispatch(cancelled ? 'pointercancel' : 'pointerup', endY);
   }
 
+  it('cancels native touch movement only during an active sheet drag', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
+    const fixture = create(true);
+    const header = fixture.nativeElement.querySelector('.touch-none') as HTMLElement;
+    const move = () => {
+      const event = new Event('touchmove', { bubbles: true, cancelable: true });
+      header.dispatchEvent(event);
+      return event;
+    };
+
+    expect(move().defaultPrevented).toBe(false);
+    header.dispatchEvent(Object.assign(new Event('pointerdown', { bubbles: true }), {
+      pointerId: 1, pointerType: 'touch', clientY: 0,
+    }));
+    expect(move().defaultPrevented).toBe(true);
+
+    header.dispatchEvent(Object.assign(new Event('pointercancel', { bubbles: true }), {
+      pointerId: 1, pointerType: 'touch', clientY: 0,
+    }));
+    expect(move().defaultPrevented).toBe(false);
+
+    const closeButton = header.querySelector('button')!;
+    closeButton.dispatchEvent(Object.assign(new Event('pointerdown', { bubbles: true }), {
+      pointerId: 2, pointerType: 'touch', clientY: 0,
+    }));
+    expect(move().defaultPrevented).toBe(false);
+  });
+
   it.each([0, 16, 100, 230])('reopens with one click %i ms after a touch dismissal', (delay) => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
     const fixture = TestBed.createComponent(ModalHostComponent);

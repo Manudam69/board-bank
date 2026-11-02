@@ -1,11 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { HapticsService } from '../../../core/services/haptics.service';
-import { mapFirebaseError } from '../../../core/utils/firebase-errors';
 import { ICONS } from '../../icons';
 
 const REFRESH_DISTANCE = 72;
 const PULL_RESISTANCE = 0.5;
+const REFRESH_TIMEOUT_MS = 10_000;
 
 @Component({
   selector: 'app-pull-refresh',
@@ -41,7 +41,7 @@ const PULL_RESISTANCE = 0.5;
             </svg>
           }
           </span>
-          <span data-refresh-label [class.sr-only]="!message() || message() === 'Datos actualizados'">{{ label() }}</span>
+          <span data-refresh-label class="min-w-0 text-sm leading-snug" [class.sr-only]="!message() || message() === 'Datos actualizados'">{{ label() }}</span>
         </div>
       }
     </div>
@@ -49,7 +49,7 @@ const PULL_RESISTANCE = 0.5;
       <button type="button"
         class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[101] focus:rounded-xl focus:bg-surface focus:p-3 focus:text-text focus:outline-accent"
         [disabled]="refreshing()" (click)="runRefresh()">
-        Actualizar datos
+        Recargar aplicación
       </button>
     }
   `,
@@ -174,16 +174,27 @@ export class PullRefreshComponent {
     clearTimeout(this.messageTimer);
     this.refreshing.set(true);
     this.message.set('');
-    this.haptics.play('selection');
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      await this.refresh()();
+      this.haptics.play('selection');
+      await Promise.race([
+        this.refresh()(),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new Error('La actualización no respondió en 10 segundos.')),
+            REFRESH_TIMEOUT_MS,
+          );
+        }),
+      ]);
       if (this.alive && version === this.version) this.message.set('Datos actualizados');
     } catch (error) {
       if (this.alive && version === this.version) {
-        this.message.set('No se pudo actualizar. ' + mapFirebaseError(error));
+        console.error('Error al actualizar los datos:', error);
+        this.message.set('No se pudo actualizar. Reintenta.');
         this.haptics.play('error');
       }
     } finally {
+      clearTimeout(timeout);
       if (this.alive && version === this.version) {
         this.refreshing.set(false);
         this.messageTimer = setTimeout(

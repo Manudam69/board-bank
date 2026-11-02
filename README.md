@@ -12,9 +12,11 @@ BoardBank es una banca digital compartida para llevar las cuentas de una partida
 - Consultar los saldos, las propiedades de cada jugador y el registro de movimientos sincronizado. Algunas operaciones recientes pueden deshacerse por quien las realizó, mientras sigan siendo reversibles.
 - Declarar bancarrota, liquidar activos y, como anfitrión, finalizar la partida. Al terminar, se muestra una clasificación final y el historial.
 - Elegir entre ediciones predefinidas (Monopoly Clásico de España, Clásico de USA, Millonario y Banco Electrónico) o crear y editar ediciones propias con moneda, importes y propiedades personalizados.
-- En móvil, deslizar hacia abajo desde el inicio del scroll y soltar para actualizar los datos del servidor sin recargar la página ni perder la pestaña o los formularios. El indicador muestra solo una flecha y desaparece 400 ms después de actualizar; los mensajes de estado siguen disponibles para lectores de pantalla. Funciona en todas las pantallas, fuera de los modales; si falla la conexión, muestra el error y conserva los datos visibles. También hay un control «Actualizar datos» accesible con el teclado.
+- En móvil, deslizar hacia abajo desde el inicio del scroll y soltar para recargar la aplicación completa, como F5. En la PWA comprueba y activa la última versión disponible antes de recargar. Funciona en todas las pantallas, fuera de los modales. La URL se conserva, pero se reinician los formularios sin guardar y el estado temporal de la pantalla. También hay un control «Recargar aplicación» accesible con el teclado.
 
-El indicador de actualización acompaña el gesto con movimiento suave, vuelve a su posición al soltar y transforma la flecha en una palomita verde al terminar correctamente. Se desvanece en 160 ms tras la confirmación breve. Con movimiento reducido, evita los desplazamientos animados y muestra la palomita sin animar su trazo.
+El indicador acompaña el gesto con movimiento suave y muestra una flecha giratoria mientras comprueba la versión, hasta que la página se recarga. Con movimiento reducido, evita los desplazamientos y el giro.
+
+Si una actualización falla o no responde en 10 segundos, el indicador muestra un aviso breve y permite reintentar sin recargar la aplicación. Los detalles técnicos del error quedan en la consola, no dentro del indicador.
 
 En móvil, los modales pueden cerrarse deslizando su cabecera hacia abajo. El gesto cancela el movimiento táctil nativo para que el navegador no descarte el siguiente toque: los botones quedan disponibles inmediatamente después de soltar.
 
@@ -35,7 +37,7 @@ La aplicación necesita autenticación anónima y permisos de lectura y escritur
 
 BoardBank se puede instalar desde su sitio HTTPS: en Chrome/Android, abre el menú y elige **Instalar aplicación**; en Safari/iPhone, usa **Compartir → Añadir a pantalla de inicio**. Se abre en modo independiente, con icono propio y soporte para las áreas seguras del dispositivo.
 
-La compilación de producción incluye el service worker de Angular. Después de una primera visita con conexión, guarda la interfaz y los recursos locales para poder abrirlos sin red. Firebase, el refresco de datos y las operaciones de la partida requieren conexión; instalar la app no habilita partidas sin conexión. Las actualizaciones se descargan en segundo plano y se usan en una nueva apertura, sin forzar una recarga durante la partida.
+La compilación de producción incluye el service worker de Angular. Después de una primera visita con conexión, guarda la interfaz y los recursos locales para poder abrirlos sin red. Firebase y las operaciones de la partida requieren conexión; instalar la app no habilita partidas sin conexión. Las actualizaciones se descargan en segundo plano, sin forzar una recarga durante la partida. El gesto de recarga comprueba las actualizaciones y activa la versión disponible antes de volver a abrir la misma URL.
 
 Para comprobar la PWA localmente, ejecuta `npm run build` y sirve `dist/board-bank/browser` con un servidor estático en `localhost` que redirija las rutas de la aplicación a `index.html`. El service worker está desactivado en desarrollo (`npm start`). El despliegue en GitHub Pages usa la ruta base que devuelve `actions/configure-pages` para que la instalación y las rutas funcionen también en subdirectorios.
 

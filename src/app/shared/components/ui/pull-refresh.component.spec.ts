@@ -10,6 +10,7 @@ describe('PullRefreshComponent', () => {
   beforeEach(() => {
     mobile = true;
     refresh.mockReset().mockResolvedValue();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: mobile,
       media: '',
@@ -75,7 +76,7 @@ describe('PullRefreshComponent', () => {
     try {
       const { fixture, target } = setup();
       pull(target);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(0);
       fixture.detectChanges();
       const status: HTMLElement = fixture.nativeElement.querySelector('[role="status"]');
       expect(status.querySelector('svg')).not.toBeNull();
@@ -175,11 +176,69 @@ describe('PullRefreshComponent', () => {
     rejectRequest(new Error('Sin conexión'));
     await vi.waitFor(() => {
       fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain('No se pudo actualizar. Sin conexión');
+      expect(fixture.nativeElement.textContent).toContain('No se pudo actualizar. Reintenta.');
     });
     expect(fixture.nativeElement.querySelector('[data-refresh-label]').classList.contains('sr-only')).toBe(false);
     expect(fixture.nativeElement.querySelector('.pull-refresh-check')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Datos actualizados');
+    expect(console.error).toHaveBeenCalledWith('Error al actualizar los datos:', expect.any(Error));
+    refresh.mockResolvedValue();
+    pull(target);
+    await fixture.whenStable();
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.textContent).toContain('Datos actualizados');
+  });
+
+  it('keeps long technical errors out of the indicator', async () => {
+    const error = new Error('Detalle técnico '.repeat(200));
+    refresh.mockRejectedValue(error);
+    const { fixture, target } = setup();
+    pull(target);
+    await fixture.whenStable();
+    const label: HTMLElement = fixture.nativeElement.querySelector('[data-refresh-label]');
+    expect(label.textContent).toBe('No se pudo actualizar. Reintenta.');
+    expect(fixture.nativeElement.textContent).not.toContain(error.message);
+    expect(console.error).toHaveBeenCalledWith('Error al actualizar los datos:', error);
+  });
+
+  it('unlocks after exactly 10 seconds without a response and ignores late completion after retry', async () => {
+    vi.useFakeTimers();
+    try {
+      let finishFirst: () => void = () => {};
+      let finishRetry: () => void = () => {};
+      refresh
+        .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }))
+        .mockImplementationOnce(() => new Promise<void>((resolve) => { finishRetry = resolve; }));
+      const { fixture, target } = setup();
+      pull(target);
+      await vi.advanceTimersByTimeAsync(9999);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('button').disabled).toBe(true);
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('button').disabled).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain('No se pudo actualizar. Reintenta.');
+
+      pull(target);
+      fixture.detectChanges();
+      expect(refresh).toHaveBeenCalledTimes(2);
+      finishFirst();
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('button').disabled).toBe(true);
+      expect(fixture.nativeElement.textContent).not.toContain('Datos actualizados');
+
+      finishRetry();
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('button').disabled).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain('Datos actualizados');
+      await vi.advanceTimersByTimeAsync(10_000);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).not.toContain('No se pudo actualizar.');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('supports the keyboard alternative and ignores results from a previous page', async () => {

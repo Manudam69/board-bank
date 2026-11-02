@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { HapticsService } from './core/services/haptics.service';
 import { RoomJanitorService } from './core/services/room-janitor.service';
 import { PullRefreshComponent } from './shared/components/ui/pull-refresh.component';
+import { AppRefreshService } from './core/services/app-refresh.service';
 
 interface RefreshablePage {
   refreshData(): Promise<void>;
@@ -20,11 +21,10 @@ interface RefreshablePage {
 export class App {
   protected readonly title = signal('board-bank');
   private readonly haptics = inject(HapticsService);
+  private readonly appRefresh = inject(AppRefreshService);
   protected readonly activePage = signal<RefreshablePage | null>(null);
   protected readonly refreshPage = async (): Promise<void> => {
-    const page = this.activePage();
-    if (!page) throw new Error('Espera a que termine de cargar la pantalla.');
-    await page.refreshData();
+    await this.appRefresh.reload();
   };
 
   protected onPageActivate(page: unknown): void {
